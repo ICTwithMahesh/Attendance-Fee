@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>පන්ති කළමනාකරු</title>
+<title>ICT Mahesh - පන්ති කළමනාකරු</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="assets/icon-192.png" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<meta name="theme-color" content="#0f1115" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="ICT Mahesh" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,8 +18,9 @@
   <!-- ===================== LOGIN ===================== -->
   <div id="login-screen">
     <div class="login-box">
-      <h1>පන්ති කළමනාකරු</h1>
-      <p class="sub">ඔබගේ admin විද්‍යුත් තැපෑලෙන් පිවිසෙන්න</p>
+      <img src="assets/logo.png" alt="ICT Mahesh" class="login-logo" />
+      <h1>ICT Mahesh</h1>
+      <p class="sub">පන්ති කළමනාකරු — ඔබගේ admin විද්‍යුත් තැපෑලෙන් පිවිසෙන්න</p>
       <label for="login-email">විද්‍යුත් තැපෑල</label>
       <input id="login-email" type="email" placeholder="you@example.com" autocomplete="username" />
       <label for="login-password">මුරපදය</label>
@@ -25,7 +33,10 @@
   <!-- ===================== APP ===================== -->
   <div id="app" class="hidden">
     <div class="sidebar">
-      <div class="brand">පන්ති කළමනාකරු<small>පැමිණීම සහ ගාස්තු</small></div>
+      <div class="brand">
+        <img src="assets/logo.png" alt="ICT Mahesh" class="brand-logo" />
+        <span>ICT Mahesh<small>පැමිණීම සහ ගාස්තු</small></span>
+      </div>
       <div class="nav-item active" data-page="dashboard">මුල් පිටුව</div>
       <div class="nav-item" data-page="students">සිසුන්</div>
       <div class="nav-item" data-page="attendance">පැමිණීම</div>
@@ -119,5 +130,12 @@
   <div id="toast-root"></div>
 
   <script type="module" src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

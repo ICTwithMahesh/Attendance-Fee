@@ -42,9 +42,18 @@ body {
   max-width: 360px;
 }
 
+.login-logo {
+  display: block;
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  margin: 0 auto 16px;
+}
+
 .login-box h1 {
   margin: 0 0 4px;
   font-size: 20px;
+  text-align: center;
 }
 
 .login-box p.sub {
@@ -129,6 +138,17 @@ button {
   font-size: 16px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 6px;
+  flex-shrink: 0;
 }
 
 .sidebar .brand small {
