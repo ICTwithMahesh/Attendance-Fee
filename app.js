@@ -176,22 +176,21 @@ function renderStudents() {
   }
 
   $("#students-table").innerHTML = `
-    <table>
-      <thead><tr><th>නම</th><th>ශ්‍රේණිය</th><th>දුරකථන අංකය</th><th>මාසික ගාස්තුව</th><th></th></tr></thead>
-      <tbody>
-        ${rows.map((s) => `
-          <tr>
-            <td>${escapeHtml(s.name)}</td>
-            <td>${escapeHtml(s.className || "-")}</td>
-            <td>${escapeHtml(s.contact || "-")}</td>
-            <td>${currency(s.monthlyFee)}</td>
-            <td class="row-actions">
-              <button class="btn-secondary" onclick="window.__editStudent('${s.id}')">සංස්කරණය</button>
-              <button class="btn-danger" onclick="window.__deleteStudent('${s.id}')">මකන්න</button>
-            </td>
-          </tr>`).join("")}
-      </tbody>
-    </table>`;
+    <div class="card-grid">
+      ${rows.map((s) => `
+        <div class="data-card">
+          <div>
+            <div class="card-title">${escapeHtml(s.name)}</div>
+            <div class="card-sub">${escapeHtml(s.className || "ශ්‍රේණිය නැත")}</div>
+          </div>
+          <div class="card-row"><span class="k">දුරකථන අංකය</span><span class="v">${escapeHtml(s.contact || "-")}</span></div>
+          <div class="card-row"><span class="k">මාසික ගාස්තුව</span><span class="v">${currency(s.monthlyFee)}</span></div>
+          <div class="card-actions">
+            <button class="btn-secondary" onclick="window.__editStudent('${s.id}')">සංස්කරණය</button>
+            <button class="btn-danger" onclick="window.__deleteStudent('${s.id}')">මකන්න</button>
+          </div>
+        </div>`).join("")}
+    </div>`;
 }
 
 $("#student-search").addEventListener("input", renderStudents);
@@ -322,31 +321,31 @@ async function renderAttendanceTable(className, month) {
   }
 
   $("#attendance-table").innerHTML = `
-    <table>
-      <thead>
-        <tr>
-          <th>සිසුවා</th>
-          ${currentSessionDates.map((d, i) => `<th>${i + 1} වන පන්තිය${d ? `<br><span style="font-weight:400;">${d}</span>` : ""}</th>`).join("")}
-        </tr>
-      </thead>
-      <tbody>
-        ${list.map((s) => `
-          <tr>
-            <td>${escapeHtml(s.name)}</td>
+    <div class="card-grid">
+      ${list.map((s) => `
+        <div class="data-card">
+          <div class="card-title">${escapeHtml(s.name)}</div>
+          <div class="session-chips">
             ${currentSessionDates.map((d, i) => {
               const rec = currentAttendanceMap[`${s.id}_${i + 1}`];
               const present = rec ? rec.present : null;
-              if (!d) return `<td><span style="color:var(--muted);font-size:12px;">දිනය සකසන්න</span></td>`;
-              return `<td>
+              if (!d) {
+                return `<div class="session-chip disabled">
+                  <span class="session-num">${i + 1} වන පන්තිය</span>
+                  <span class="session-date">දිනය සකසන්න</span>
+                </div>`;
+              }
+              return `<div class="session-chip">
+                <span class="session-num">${i + 1} වන පන්තිය <span class="session-date">${d}</span></span>
                 <div class="toggle-group">
                   <button class="toggle-btn ${present === true ? "present-on" : ""}" onclick="window.__setAttendance('${s.id}','${className}','${month}',${i + 1},'${d}',true)">✓</button>
                   <button class="toggle-btn ${present === false ? "absent-on" : ""}" onclick="window.__setAttendance('${s.id}','${className}','${month}',${i + 1},'${d}',false)">✗</button>
                 </div>
-              </td>`;
+              </div>`;
             }).join("")}
-          </tr>`).join("")}
-      </tbody>
-    </table>`;
+          </div>
+        </div>`).join("")}
+    </div>`;
 }
 
 window.__setAttendance = async (studentId, className, month, session, date, present) => {
@@ -370,11 +369,12 @@ $("#fees-search").addEventListener("input", () => {
     return;
   }
   $("#fees-search-results").innerHTML = `
-    <div class="panel">
+    <div class="card-grid" style="margin-bottom:20px;">
       ${matches.map((s) => `
-        <div class="attendance-row" style="cursor:pointer;" onclick="window.__selectFeeStudent('${s.id}')">
-          <div class="name">${escapeHtml(s.name)} <span style="color:var(--muted);font-size:12px;">${escapeHtml(s.className || "")}</span></div>
-          <div style="color:var(--muted);font-size:12px;">${currency(s.monthlyFee)}/මාසිකව →</div>
+        <div class="data-card" style="cursor:pointer;" onclick="window.__selectFeeStudent('${s.id}')">
+          <div class="card-title">${escapeHtml(s.name)}</div>
+          <div class="card-sub">${escapeHtml(s.className || "ශ්‍රේණිය නැත")}</div>
+          <div class="card-row"><span class="k">මාසිකව</span><span class="v">${currency(s.monthlyFee)}</span></div>
         </div>`).join("")}
     </div>`;
 });
@@ -434,21 +434,18 @@ async function renderFeeDetail(studentId) {
     </div>
     <div class="panel">
       <h3>මාස අනුව ගාස්තු</h3>
-      <table>
-        <thead><tr><th>මාසය</th><th>ගෙවිය යුතු</th><th>ගෙවා ඇත</th><th>තත්ත්වය</th><th></th></tr></thead>
-        <tbody>
-          ${rows.map((r) => `
-            <tr>
-              <td>${monthLabel(r.month)}</td>
-              <td>${currency(r.due)}</td>
-              <td>${currency(r.paid)}</td>
-              <td><span class="badge ${r.status}">${r.status === "paid" ? "ගෙවා ඇත" : r.status === "partial" ? "අර්ධ වශයෙන්" : "පොරොත්තු"}</span></td>
-              <td class="row-actions">
-                <button class="btn-secondary" onclick="window.__recordPayment('${studentId}','${r.month}')">ගෙවීම වාර්තා කරන්න</button>
-              </td>
-            </tr>`).join("")}
-        </tbody>
-      </table>
+      <div class="card-grid">
+        ${rows.map((r) => `
+          <div class="data-card">
+            <div class="card-title">${monthLabel(r.month)}</div>
+            <div class="card-row"><span class="k">ගෙවිය යුතු</span><span class="v">${currency(r.due)}</span></div>
+            <div class="card-row"><span class="k">ගෙවා ඇත</span><span class="v">${currency(r.paid)}</span></div>
+            <div><span class="badge ${r.status}">${r.status === "paid" ? "ගෙවා ඇත" : r.status === "partial" ? "අර්ධ වශයෙන්" : "පොරොත්තු"}</span></div>
+            <div class="card-actions">
+              <button class="btn-secondary" onclick="window.__recordPayment('${studentId}','${r.month}')">ගෙවීම වාර්තා කරන්න</button>
+            </div>
+          </div>`).join("")}
+      </div>
     </div>`;
 }
 
@@ -545,13 +542,15 @@ async function renderDashboard() {
   }
 
   $("#recent-fees-table").innerHTML = `
-    <table>
-      <thead><tr><th>සිසුවා</th><th>ගෙවූ මුදල</th><th>දිනය</th></tr></thead>
-      <tbody>
-        ${recent.map((r) => {
-          const s = students.find((st) => st.id === r.studentId);
-          return `<tr><td>${escapeHtml(s?.name || "නොදන්නා")}</td><td>${currency(r.amountPaid)}</td><td>${escapeHtml(r.lastPaymentDate || "-")}</td></tr>`;
-        }).join("")}
-      </tbody>
-    </table>`;
+    <div class="card-grid">
+      ${recent.map((r) => {
+        const s = students.find((st) => st.id === r.studentId);
+        return `
+          <div class="data-card">
+            <div class="card-title">${escapeHtml(s?.name || "නොදන්නා")}</div>
+            <div class="card-row"><span class="k">ගෙවූ මුදල</span><span class="v">${currency(r.amountPaid)}</span></div>
+            <div class="card-row"><span class="k">දිනය</span><span class="v">${escapeHtml(r.lastPaymentDate || "-")}</span></div>
+          </div>`;
+      }).join("")}
+    </div>`;
 }

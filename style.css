@@ -369,6 +369,98 @@ th br + span { font-weight: 400; color: var(--muted); }
 .toggle-btn.present-on { background: rgba(46,207,142,0.2); color: var(--accent-2); border-color: var(--accent-2); }
 .toggle-btn.absent-on { background: rgba(255,92,114,0.2); color: var(--danger); border-color: var(--danger); }
 
+/* ---------- Card grid (responsive) ---------- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.data-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.data-card .card-title {
+  font-size: 15px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.data-card .card-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: -6px;
+}
+
+.data-card .card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.data-card .card-row .k {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.data-card .card-row .v {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.data-card .card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.data-card .card-actions button {
+  flex: 1;
+  font-size: 12.5px;
+  padding: 8px 10px;
+}
+
+.session-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  gap: 8px;
+}
+
+.session-chip.disabled {
+  color: var(--muted);
+}
+
+.session-chip .session-num {
+  flex-shrink: 0;
+}
+
+.session-chip .session-date {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .empty-state {
   color: var(--muted);
   font-size: 13.5px;
