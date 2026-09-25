@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="si">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Class Attendance & Fee Manager</title>
+<title>පන්ති කළමනාකරු</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,13 +11,13 @@
   <!-- ===================== LOGIN ===================== -->
   <div id="login-screen">
     <div class="login-box">
-      <h1>Class Manager</h1>
-      <p class="sub">Sign in with your admin email</p>
-      <label for="login-email">Email</label>
+      <h1>පන්ති කළමනාකරු</h1>
+      <p class="sub">ඔබගේ admin විද්‍යුත් තැපෑලෙන් පිවිසෙන්න</p>
+      <label for="login-email">විද්‍යුත් තැපෑල</label>
       <input id="login-email" type="email" placeholder="you@example.com" autocomplete="username" />
-      <label for="login-password">Password</label>
+      <label for="login-password">මුරපදය</label>
       <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
-      <button class="btn-primary" id="login-btn">Sign In</button>
+      <button class="btn-primary" id="login-btn">පිවිසෙන්න</button>
       <div id="login-error"></div>
     </div>
   </div>
@@ -25,14 +25,14 @@
   <!-- ===================== APP ===================== -->
   <div id="app" class="hidden">
     <div class="sidebar">
-      <div class="brand">Class Manager<small>Attendance & Fees</small></div>
-      <div class="nav-item active" data-page="dashboard">Dashboard</div>
-      <div class="nav-item" data-page="students">Students</div>
-      <div class="nav-item" data-page="attendance">Attendance</div>
-      <div class="nav-item" data-page="fees">Fees</div>
+      <div class="brand">පන්ති කළමනාකරු<small>පැමිණීම සහ ගාස්තු</small></div>
+      <div class="nav-item active" data-page="dashboard">මුල් පිටුව</div>
+      <div class="nav-item" data-page="students">සිසුන්</div>
+      <div class="nav-item" data-page="attendance">පැමිණීම</div>
+      <div class="nav-item" data-page="fees">ගාස්තු</div>
       <div class="sidebar-footer">
         <div class="email" id="current-user-email"></div>
-        <button class="btn-secondary" id="logout-btn" style="width:100%">Log Out</button>
+        <button class="btn-secondary" id="logout-btn" style="width:100%">ඉවත් වන්න</button>
       </div>
     </div>
 
@@ -40,31 +40,35 @@
 
       <!-- ---------- DASHBOARD ---------- -->
       <div class="page active" id="page-dashboard">
-        <div class="page-header"><h2>Dashboard</h2></div>
+        <div class="page-header"><h2>මුල් පිටුව</h2></div>
         <div class="stat-grid">
           <div class="stat-card">
-            <div class="label">Total Students</div>
+            <div class="label">මුළු සිසුන් ගණන</div>
             <div class="value" id="stat-total-students">0</div>
           </div>
           <div class="stat-card">
-            <div class="label">Present Today</div>
+            <div class="label">අද පැමිණි</div>
             <div class="value green" id="stat-present-today">0</div>
           </div>
           <div class="stat-card">
-            <div class="label">Absent Today</div>
+            <div class="label">අද නොපැමිණි</div>
             <div class="value danger" id="stat-absent-today">0</div>
           </div>
           <div class="stat-card">
-            <div class="label">Fees Collected (this month)</div>
+            <div class="label">මෙම මාසයේ එකතු කළ ගාස්තු</div>
             <div class="value green" id="stat-fees-collected">0</div>
           </div>
           <div class="stat-card">
-            <div class="label">Fees Outstanding (this month)</div>
+            <div class="label">මුළු පොරොත්තු ගාස්තුව (සියලුම සිසුන්)</div>
             <div class="value danger" id="stat-fees-due">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">ගාස්තු පොරොත්තු සිසුන් ගණන</div>
+            <div class="value warn" id="stat-pending-students">0</div>
           </div>
         </div>
         <div class="panel">
-          <h3>Recent Fee Activity</h3>
+          <h3>මෑත ගෙවීම් ක්‍රියාකාරකම්</h3>
           <div id="recent-fees-table"></div>
         </div>
       </div>
@@ -72,12 +76,12 @@
       <!-- ---------- STUDENTS ---------- -->
       <div class="page" id="page-students">
         <div class="page-header">
-          <h2>Students</h2>
-          <button class="btn-primary" style="width:auto" id="add-student-btn">+ Add Student</button>
+          <h2>සිසුන්</h2>
+          <button class="btn-primary" style="width:auto" id="add-student-btn">+ සිසුවෙකු එකතු කරන්න</button>
         </div>
         <div class="toolbar">
-          <input id="student-search" placeholder="Search by name..." />
-          <select id="student-class-filter"><option value="">All Classes</option></select>
+          <input id="student-search" placeholder="නම අනුව සොයන්න..." />
+          <select id="student-class-filter"><option value="">සියලුම ශ්‍රේණි</option></select>
         </div>
         <div class="panel">
           <div id="students-table"></div>
@@ -86,33 +90,31 @@
 
       <!-- ---------- ATTENDANCE ---------- -->
       <div class="page" id="page-attendance">
-        <div class="page-header"><h2>Attendance</h2></div>
+        <div class="page-header"><h2>පැමිණීම</h2></div>
         <div class="toolbar">
-          <input type="date" id="attendance-date" />
-          <select id="attendance-class-filter"><option value="">All Classes</option></select>
-          <button class="btn-secondary" id="mark-all-present">Mark All Present</button>
+          <select id="attendance-class-select"><option value="">ශ්‍රේණියක් තෝරන්න</option></select>
+          <input type="month" id="attendance-month" />
         </div>
+        <div class="panel" id="attendance-sessions-panel"></div>
         <div class="panel">
-          <div id="attendance-list" class="attendance-grid"></div>
+          <div id="attendance-table"></div>
         </div>
       </div>
 
       <!-- ---------- FEES ---------- -->
       <div class="page" id="page-fees">
-        <div class="page-header"><h2>Fees</h2></div>
+        <div class="page-header"><h2>ගාස්තු</h2></div>
         <div class="toolbar">
-          <input type="month" id="fees-month" />
-          <select id="fees-class-filter"><option value="">All Classes</option></select>
+          <input id="fees-search" placeholder="සිසුවාගේ නම ටයිප් කරන්න..." />
         </div>
-        <div class="panel">
-          <div id="fees-table"></div>
-        </div>
+        <div id="fees-search-results"></div>
+        <div id="fees-detail"></div>
       </div>
 
     </div>
   </div>
 
-  <!-- ===================== MODALS (populated by JS) ===================== -->
+  <!-- ===================== MODALS ===================== -->
   <div id="modal-root"></div>
   <div id="toast-root"></div>
 

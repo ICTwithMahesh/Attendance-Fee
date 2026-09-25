@@ -1,6 +1,6 @@
 // ============================================================
-// Class Attendance & Fee Manager
-// Firebase v9 modular SDK (loaded straight from Google's CDN)
+// Class Attendance & Fee Manager (Sinhala UI)
+// Firebase v9 modular SDK, loaded straight from Google's CDN
 // ============================================================
 
 import firebaseConfig from "./firebase-config.js";
@@ -10,7 +10,7 @@ import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, getDocs, setDoc, addDoc, updateDoc,
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc,
   deleteDoc, query, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -19,10 +19,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ---------------- State ----------------
-let students = [];   // {id, name, className, contact, monthlyFee}
-let attendanceCache = {}; // key `${date}_${studentId}` -> {present}
-let feesCache = {};       // key `${studentId}_${month}` -> {amountDue, amountPaid, status}
+let students = [];      // {id, name, className, contact, monthlyFee, createdAt}
 let unsubStudents = null;
+let selectedFeeStudentId = null;
 
 // ---------------- Helpers ----------------
 const $ = (sel) => document.querySelector(sel);
@@ -39,7 +38,39 @@ function showToast(msg) {
 }
 
 function currency(n) {
-  return "Rs. " + Number(n || 0).toLocaleString();
+  return "රු. " + Number(n || 0).toLocaleString();
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+function classKey(className) {
+  return (className || "default").toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") || "default";
+}
+
+// month range helper: inclusive list of "YYYY-MM" from start to end
+function monthsRange(startStr, endStr) {
+  if (!startStr) return [endStr];
+  const [sy, sm] = startStr.split("-").map(Number);
+  const [ey, em] = endStr.split("-").map(Number);
+  let d = new Date(sy, sm - 1, 1);
+  const end = new Date(ey, em - 1, 1);
+  if (d > end) return [endStr];
+  const out = [];
+  while (d <= end) {
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    d.setMonth(d.getMonth() + 1);
+  }
+  return out;
+}
+
+function monthLabel(m) {
+  const [y, mo] = m.split("-").map(Number);
+  const names = ["ජනවාරි","පෙබරවාරි","මාර්තු","අප්‍රේල්","මැයි","ජූනි","ජූලි","අගෝස්තු","සැප්තැම්බර්","ඔක්තෝබර්","නොවැම්බර්","දෙසැම්බර්"];
+  return `${names[mo - 1]} ${y}`;
 }
 
 // ---------------- Auth ----------------
@@ -48,7 +79,7 @@ $("#login-btn").addEventListener("click", async () => {
   const password = $("#login-password").value;
   $("#login-error").textContent = "";
   if (!email || !password) {
-    $("#login-error").textContent = "Enter both email and password.";
+    $("#login-error").textContent = "විද්‍යුත් තැපෑල සහ මුරපදය දෙකම ඇතුළත් කරන්න.";
     return;
   }
   try {
@@ -60,13 +91,13 @@ $("#login-btn").addEventListener("click", async () => {
 
 function friendlyAuthError(code) {
   const map = {
-    "auth/invalid-email": "That email address looks invalid.",
-    "auth/user-not-found": "No account with that email. Create the user in Firebase Console > Authentication.",
-    "auth/wrong-password": "Incorrect password.",
-    "auth/invalid-credential": "Incorrect email or password.",
-    "auth/too-many-requests": "Too many attempts. Try again later.",
+    "auth/invalid-email": "විද්‍යුත් තැපෑල වැරදියි.",
+    "auth/user-not-found": "මෙම විද්‍යුත් තැපෑලෙන් ගිණුමක් නැත. Firebase Console > Authentication හි user කෙනෙක් සාදන්න.",
+    "auth/wrong-password": "මුරපදය වැරදියි.",
+    "auth/invalid-credential": "විද්‍යුත් තැපෑල හෝ මුරපදය වැරදියි.",
+    "auth/too-many-requests": "උත්සාහ කිරීම් වැඩියි. පසුව උත්සාහ කරන්න.",
   };
-  return map[code] || "Could not sign in. Check your Firebase setup.";
+  return map[code] || "පිවිසීමට නොහැකි විය. Firebase සැකසුම බලන්න.";
 }
 
 $("#logout-btn").addEventListener("click", () => signOut(auth));
@@ -93,7 +124,7 @@ $all(".nav-item").forEach((item) => {
     $all(".page").forEach((p) => p.classList.remove("active"));
     $(`#page-${page}`).classList.add("active");
     if (page === "attendance") renderAttendance();
-    if (page === "fees") renderFees();
+    if (page === "fees") renderFeesPage();
     if (page === "dashboard") renderDashboard();
   });
 });
@@ -106,30 +137,25 @@ function startListeners() {
     renderStudents();
     renderDashboard();
     if ($("#page-attendance").classList.contains("active")) renderAttendance();
-    if ($("#page-fees").classList.contains("active")) renderFees();
+    if ($("#page-fees").classList.contains("active")) renderFeesPage();
   });
 
-  if (!$("#attendance-date").value) $("#attendance-date").value = todayStr();
-  if (!$("#fees-month").value) $("#fees-month").value = monthStr();
-
+  if (!$("#attendance-month").value) $("#attendance-month").value = monthStr();
   renderDashboard();
 }
 
 function refreshClassFilters() {
   const classes = [...new Set(students.map((s) => s.className).filter(Boolean))].sort();
-  [ "#student-class-filter", "#attendance-class-filter", "#fees-class-filter" ].forEach((sel) => {
+  ["#student-class-filter", "#attendance-class-select"].forEach((sel) => {
     const el = $(sel);
     const current = el.value;
-    el.innerHTML = '<option value="">All Classes</option>' +
+    const placeholder = sel === "#attendance-class-select"
+      ? '<option value="">ශ්‍රේණියක් තෝරන්න</option>'
+      : '<option value="">සියලුම ශ්‍රේණි</option>';
+    el.innerHTML = placeholder +
       classes.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
     el.value = current;
   });
-}
-
-function escapeHtml(s) {
-  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  }[c]));
 }
 
 // ============================================================
@@ -145,13 +171,13 @@ function renderStudents() {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   if (rows.length === 0) {
-    $("#students-table").innerHTML = '<div class="empty-state">No students yet. Click "+ Add Student" to begin.</div>';
+    $("#students-table").innerHTML = '<div class="empty-state">තවම සිසුන් නැත. "+ සිසුවෙකු එකතු කරන්න" ක්ලික් කරන්න.</div>';
     return;
   }
 
   $("#students-table").innerHTML = `
     <table>
-      <thead><tr><th>Name</th><th>Class</th><th>Contact</th><th>Monthly Fee</th><th></th></tr></thead>
+      <thead><tr><th>නම</th><th>ශ්‍රේණිය</th><th>දුරකථන අංකය</th><th>මාසික ගාස්තුව</th><th></th></tr></thead>
       <tbody>
         ${rows.map((s) => `
           <tr>
@@ -160,8 +186,8 @@ function renderStudents() {
             <td>${escapeHtml(s.contact || "-")}</td>
             <td>${currency(s.monthlyFee)}</td>
             <td class="row-actions">
-              <button class="btn-secondary" onclick="window.__editStudent('${s.id}')">Edit</button>
-              <button class="btn-danger" onclick="window.__deleteStudent('${s.id}')">Delete</button>
+              <button class="btn-secondary" onclick="window.__editStudent('${s.id}')">සංස්කරණය</button>
+              <button class="btn-danger" onclick="window.__deleteStudent('${s.id}')">මකන්න</button>
             </td>
           </tr>`).join("")}
       </tbody>
@@ -176,9 +202,9 @@ $("#add-student-btn").addEventListener("click", () => openStudentModal());
 window.__editStudent = (id) => openStudentModal(students.find((s) => s.id === id));
 
 window.__deleteStudent = async (id) => {
-  if (!confirm("Delete this student? This cannot be undone.")) return;
+  if (!confirm("මෙම සිසුවා මකන්නද? මෙය පසුව අවලංගු කළ නොහැක.")) return;
   await deleteDoc(doc(db, "students", id));
-  showToast("Student deleted");
+  showToast("සිසුවා මකා දමන ලදී");
 };
 
 function openStudentModal(student) {
@@ -186,18 +212,18 @@ function openStudentModal(student) {
   $("#modal-root").innerHTML = `
     <div class="modal-backdrop">
       <div class="modal">
-        <h3>${isEdit ? "Edit" : "Add"} Student</h3>
-        <label>Full Name</label>
+        <h3>${isEdit ? "සිසුවා සංස්කරණය" : "සිසුවෙකු එකතු කරන්න"}</h3>
+        <label>සම්පූර්ණ නම</label>
         <input id="m-name" value="${escapeHtml(student?.name || "")}" />
-        <label>Class / Grade</label>
-        <input id="m-class" value="${escapeHtml(student?.className || "")}" placeholder="e.g. Grade 10 A" />
-        <label>Contact (phone/parent)</label>
+        <label>ශ්‍රේණිය</label>
+        <input id="m-class" value="${escapeHtml(student?.className || "")}" placeholder="උදා: 10 ශ්‍රේණිය A" />
+        <label>දුරකථන අංකය (දෙමාපිය/සිසු)</label>
         <input id="m-contact" value="${escapeHtml(student?.contact || "")}" />
-        <label>Monthly Fee (Rs.)</label>
+        <label>මාසික ගාස්තුව (රු.)</label>
         <input id="m-fee" type="number" value="${student?.monthlyFee ?? ""}" />
         <div class="modal-actions">
-          <button class="btn-secondary" id="m-cancel">Cancel</button>
-          <button class="btn-primary" id="m-save">Save</button>
+          <button class="btn-secondary" id="m-cancel">අවලංගු කරන්න</button>
+          <button class="btn-primary" id="m-save">සුරකින්න</button>
         </div>
       </div>
     </div>`;
@@ -205,7 +231,7 @@ function openStudentModal(student) {
   $("#m-cancel").addEventListener("click", closeModal);
   $("#m-save").addEventListener("click", async () => {
     const name = $("#m-name").value.trim();
-    if (!name) { showToast("Name is required"); return; }
+    if (!name) { showToast("නම අවශ්‍යයි"); return; }
     const data = {
       name,
       className: $("#m-class").value.trim(),
@@ -214,10 +240,11 @@ function openStudentModal(student) {
     };
     if (isEdit) {
       await updateDoc(doc(db, "students", student.id), data);
-      showToast("Student updated");
+      showToast("සිසුවාගේ තොරතුරු යාවත්කාලීන කරන ලදී");
     } else {
+      data.createdAt = monthStr(); // enrollment month, used for fee pending calculation
       await addDoc(collection(db, "students"), data);
-      showToast("Student added");
+      showToast("සිසුවා එකතු කරන ලදී");
     }
     closeModal();
   });
@@ -226,137 +253,224 @@ function openStudentModal(student) {
 function closeModal() { $("#modal-root").innerHTML = ""; }
 
 // ============================================================
-// ATTENDANCE
+// ATTENDANCE  (up to 5 class-days per month, each with its own date)
 // ============================================================
-$("#attendance-date").addEventListener("change", renderAttendance);
-$("#attendance-class-filter").addEventListener("change", renderAttendance);
+const SESSIONS_PER_MONTH = 5;
+let currentSessionDates = ["", "", "", "", ""];
+let currentAttendanceMap = {}; // `${studentId}_${session}` -> {present, date}
+
+$("#attendance-class-select").addEventListener("change", renderAttendance);
+$("#attendance-month").addEventListener("change", renderAttendance);
 
 async function renderAttendance() {
-  const date = $("#attendance-date").value || todayStr();
-  const classFilter = $("#attendance-class-filter").value;
+  const className = $("#attendance-class-select").value;
+  const month = $("#attendance-month").value || monthStr();
 
-  const q = query(collection(db, "attendance"), where("date", "==", date));
-  const snap = await getDocs(q);
-  const records = {};
-  snap.forEach((d) => { records[d.data().studentId] = { docId: d.id, ...d.data() }; });
-
-  const list = students
-    .filter((s) => !classFilter || s.className === classFilter)
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  if (list.length === 0) {
-    $("#attendance-list").innerHTML = '<div class="empty-state">No students to show. Add students first.</div>';
+  if (!className) {
+    $("#attendance-sessions-panel").innerHTML = '<div class="empty-state">කරුණාකර ශ්‍රේණියක් තෝරන්න.</div>';
+    $("#attendance-table").innerHTML = "";
     return;
   }
 
-  $("#attendance-list").innerHTML = list.map((s) => {
-    const rec = records[s.id];
-    const present = rec ? rec.present : null;
-    return `
-      <div class="attendance-row">
-        <div class="name">${escapeHtml(s.name)} <span style="color:var(--muted);font-size:12px;">${escapeHtml(s.className || "")}</span></div>
-        <div class="toggle-group">
-          <button class="toggle-btn ${present === true ? "present-on" : ""}" onclick="window.__setAttendance('${s.id}','${date}',true)">Present</button>
-          <button class="toggle-btn ${present === false ? "absent-on" : ""}" onclick="window.__setAttendance('${s.id}','${date}',false)">Absent</button>
-        </div>
-      </div>`;
-  }).join("");
+  const sessionsId = `${classKey(className)}_${month}`;
+  const sessionsSnap = await getDoc(doc(db, "classSessions", sessionsId));
+  currentSessionDates = sessionsSnap.exists() && sessionsSnap.data().dates
+    ? sessionsSnap.data().dates
+    : ["", "", "", "", ""];
+
+  $("#attendance-sessions-panel").innerHTML = `
+    <h3>මෙම මාසයේ පන්ති දින (${escapeHtml(className)} — ${monthLabel(month)})</h3>
+    <div class="toolbar">
+      ${currentSessionDates.map((d, i) => `
+        <div>
+          <label style="margin:0 0 4px;">${i + 1} වන පන්තිය</label>
+          <input type="date" class="session-date-input" data-session="${i}" value="${d || ""}" />
+        </div>`).join("")}
+    </div>`;
+
+  $all(".session-date-input").forEach((inp) => {
+    inp.addEventListener("change", async (e) => {
+      const idx = Number(e.target.dataset.session);
+      currentSessionDates[idx] = e.target.value;
+      await setDoc(doc(db, "classSessions", sessionsId), {
+        className, month, dates: currentSessionDates
+      }, { merge: true });
+      showToast(`${idx + 1} වන පන්තියේ දිනය සුරකින ලදී`);
+      renderAttendanceTable(className, month);
+    });
+  });
+
+  await renderAttendanceTable(className, month);
 }
 
-window.__setAttendance = async (studentId, date, present) => {
-  const docId = `${date}_${studentId}`;
-  const student = students.find((s) => s.id === studentId);
-  await setDoc(doc(db, "attendance", docId), {
-    studentId, date, present, className: student?.className || ""
+async function renderAttendanceTable(className, month) {
+  const q = query(collection(db, "attendance"), where("className", "==", className), where("month", "==", month));
+  const snap = await getDocs(q);
+  currentAttendanceMap = {};
+  snap.forEach((d) => {
+    const data = d.data();
+    currentAttendanceMap[`${data.studentId}_${data.session}`] = data;
   });
-  renderAttendance();
+
+  const list = students
+    .filter((s) => s.className === className)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  if (list.length === 0) {
+    $("#attendance-table").innerHTML = '<div class="empty-state">මෙම ශ්‍රේණියේ සිසුන් නැත.</div>';
+    return;
+  }
+
+  $("#attendance-table").innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>සිසුවා</th>
+          ${currentSessionDates.map((d, i) => `<th>${i + 1} වන පන්තිය${d ? `<br><span style="font-weight:400;">${d}</span>` : ""}</th>`).join("")}
+        </tr>
+      </thead>
+      <tbody>
+        ${list.map((s) => `
+          <tr>
+            <td>${escapeHtml(s.name)}</td>
+            ${currentSessionDates.map((d, i) => {
+              const rec = currentAttendanceMap[`${s.id}_${i + 1}`];
+              const present = rec ? rec.present : null;
+              if (!d) return `<td><span style="color:var(--muted);font-size:12px;">දිනය සකසන්න</span></td>`;
+              return `<td>
+                <div class="toggle-group">
+                  <button class="toggle-btn ${present === true ? "present-on" : ""}" onclick="window.__setAttendance('${s.id}','${className}','${month}',${i + 1},'${d}',true)">✓</button>
+                  <button class="toggle-btn ${present === false ? "absent-on" : ""}" onclick="window.__setAttendance('${s.id}','${className}','${month}',${i + 1},'${d}',false)">✗</button>
+                </div>
+              </td>`;
+            }).join("")}
+          </tr>`).join("")}
+      </tbody>
+    </table>`;
+}
+
+window.__setAttendance = async (studentId, className, month, session, date, present) => {
+  const docId = `${studentId}_${month}_${session}`;
+  await setDoc(doc(db, "attendance", docId), {
+    studentId, className, month, session, date, present
+  });
+  renderAttendanceTable(className, month);
   renderDashboard();
 };
 
-$("#mark-all-present").addEventListener("click", async () => {
-  const date = $("#attendance-date").value || todayStr();
-  const classFilter = $("#attendance-class-filter").value;
-  const list = students.filter((s) => !classFilter || s.className === classFilter);
-  for (const s of list) {
-    await setDoc(doc(db, "attendance", `${date}_${s.id}`), {
-      studentId: s.id, date, present: true, className: s.className || ""
-    });
-  }
-  showToast("Marked all present");
-  renderAttendance();
-  renderDashboard();
-});
-
 // ============================================================
-// FEES
+// FEES  (search a student, see pending months, record payments)
 // ============================================================
-$("#fees-month").addEventListener("change", renderFees);
-$("#fees-class-filter").addEventListener("change", renderFees);
-
-async function renderFees() {
-  const month = $("#fees-month").value || monthStr();
-  const classFilter = $("#fees-class-filter").value;
-
-  const q = query(collection(db, "fees"), where("month", "==", month));
-  const snap = await getDocs(q);
-  const records = {};
-  snap.forEach((d) => { records[d.data().studentId] = { docId: d.id, ...d.data() }; });
-
-  const list = students
-    .filter((s) => !classFilter || s.className === classFilter)
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  if (list.length === 0) {
-    $("#fees-table").innerHTML = '<div class="empty-state">No students to show.</div>';
+$("#fees-search").addEventListener("input", () => {
+  const term = $("#fees-search").value.trim().toLowerCase();
+  if (!term) { $("#fees-search-results").innerHTML = ""; return; }
+  const matches = students.filter((s) => s.name.toLowerCase().includes(term)).slice(0, 8);
+  if (matches.length === 0) {
+    $("#fees-search-results").innerHTML = '<div class="empty-state">සිසුවෙක් හමු නොවීය.</div>';
     return;
   }
+  $("#fees-search-results").innerHTML = `
+    <div class="panel">
+      ${matches.map((s) => `
+        <div class="attendance-row" style="cursor:pointer;" onclick="window.__selectFeeStudent('${s.id}')">
+          <div class="name">${escapeHtml(s.name)} <span style="color:var(--muted);font-size:12px;">${escapeHtml(s.className || "")}</span></div>
+          <div style="color:var(--muted);font-size:12px;">${currency(s.monthlyFee)}/මාසිකව →</div>
+        </div>`).join("")}
+    </div>`;
+});
 
-  $("#fees-table").innerHTML = `
-    <table>
-      <thead><tr><th>Name</th><th>Class</th><th>Due</th><th>Paid</th><th>Status</th><th></th></tr></thead>
-      <tbody>
-        ${list.map((s) => {
-          const rec = records[s.id];
-          const due = s.monthlyFee || 0;
-          const paid = rec?.amountPaid || 0;
-          let status = "due";
-          if (paid >= due && due > 0) status = "paid";
-          else if (paid > 0) status = "partial";
-          return `
+window.__selectFeeStudent = (id) => {
+  selectedFeeStudentId = id;
+  $("#fees-search-results").innerHTML = "";
+  $("#fees-search").value = students.find((s) => s.id === id)?.name || "";
+  renderFeeDetail(id);
+};
+
+function renderFeesPage() {
+  if (selectedFeeStudentId) renderFeeDetail(selectedFeeStudentId);
+}
+
+async function renderFeeDetail(studentId) {
+  const student = students.find((s) => s.id === studentId);
+  if (!student) { $("#fees-detail").innerHTML = ""; return; }
+
+  const feesSnap = await getDocs(query(collection(db, "fees"), where("studentId", "==", studentId)));
+  const feeMap = {};
+  feesSnap.forEach((d) => { feeMap[d.data().month] = d.data(); });
+
+  const months = monthsRange(student.createdAt, monthStr()).reverse(); // most recent first
+  const due = student.monthlyFee || 0;
+
+  let pendingMonths = 0;
+  let pendingTotal = 0;
+  const rows = months.map((m) => {
+    const rec = feeMap[m];
+    const paid = rec?.amountPaid || 0;
+    let status = "due";
+    if (due === 0) status = "paid";
+    else if (paid >= due) status = "paid";
+    else if (paid > 0) status = "partial";
+    if (status !== "paid") { pendingMonths++; pendingTotal += Math.max(due - paid, 0); }
+    return { month: m, due, paid, status };
+  });
+
+  $("#fees-detail").innerHTML = `
+    <div class="panel">
+      <h3>${escapeHtml(student.name)} <span style="color:var(--muted);font-weight:400;font-size:13px;">(${escapeHtml(student.className || "-")})</span></h3>
+      <div class="stat-grid" style="margin-top:14px;">
+        <div class="stat-card">
+          <div class="label">පොරොත්තු මාස ගණන</div>
+          <div class="value ${pendingMonths > 0 ? "danger" : "green"}">${pendingMonths}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">මුළු පොරොත්තු ගාස්තුව</div>
+          <div class="value ${pendingTotal > 0 ? "danger" : "green"}">${currency(pendingTotal)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">මාසික ගාස්තුව</div>
+          <div class="value">${currency(due)}</div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>මාස අනුව ගාස්තු</h3>
+      <table>
+        <thead><tr><th>මාසය</th><th>ගෙවිය යුතු</th><th>ගෙවා ඇත</th><th>තත්ත්වය</th><th></th></tr></thead>
+        <tbody>
+          ${rows.map((r) => `
             <tr>
-              <td>${escapeHtml(s.name)}</td>
-              <td>${escapeHtml(s.className || "-")}</td>
-              <td>${currency(due)}</td>
-              <td>${currency(paid)}</td>
-              <td><span class="badge ${status}">${status}</span></td>
+              <td>${monthLabel(r.month)}</td>
+              <td>${currency(r.due)}</td>
+              <td>${currency(r.paid)}</td>
+              <td><span class="badge ${r.status}">${r.status === "paid" ? "ගෙවා ඇත" : r.status === "partial" ? "අර්ධ වශයෙන්" : "පොරොත්තු"}</span></td>
               <td class="row-actions">
-                <button class="btn-secondary" onclick="window.__recordPayment('${s.id}','${month}')">Record Payment</button>
+                <button class="btn-secondary" onclick="window.__recordPayment('${studentId}','${r.month}')">ගෙවීම වාර්තා කරන්න</button>
               </td>
-            </tr>`;
-        }).join("")}
-      </tbody>
-    </table>`;
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 window.__recordPayment = async (studentId, month) => {
   const student = students.find((s) => s.id === studentId);
   const docId = `${studentId}_${month}`;
-  const existing = await getDocs(query(collection(db, "fees"), where("studentId", "==", studentId), where("month", "==", month)));
-  const currentPaid = existing.empty ? 0 : existing.docs[0].data().amountPaid || 0;
+  const existing = await getDoc(doc(db, "fees", docId));
+  const currentPaid = existing.exists() ? existing.data().amountPaid || 0 : 0;
 
   $("#modal-root").innerHTML = `
     <div class="modal-backdrop">
       <div class="modal">
-        <h3>Record Payment — ${escapeHtml(student.name)}</h3>
-        <label>Month</label>
-        <input value="${month}" disabled />
-        <label>Amount Due</label>
+        <h3>ගෙවීම වාර්තා කරන්න — ${escapeHtml(student.name)}</h3>
+        <label>මාසය</label>
+        <input value="${monthLabel(month)}" disabled />
+        <label>ගෙවිය යුතු මුදල</label>
         <input value="${currency(student.monthlyFee)}" disabled />
-        <label>Total Paid So Far (edit to update)</label>
+        <label>මුළු ගෙවූ මුදල (යාවත්කාලීන කිරීමට වෙනස් කරන්න)</label>
         <input id="m-paid" type="number" value="${currentPaid}" />
         <div class="modal-actions">
-          <button class="btn-secondary" id="m-cancel">Cancel</button>
-          <button class="btn-primary" id="m-save">Save</button>
+          <button class="btn-secondary" id="m-cancel">අවලංගු කරන්න</button>
+          <button class="btn-primary" id="m-save">සුරකින්න</button>
         </div>
       </div>
     </div>`;
@@ -369,9 +483,9 @@ window.__recordPayment = async (studentId, month) => {
       amountDue: student.monthlyFee || 0,
       lastPaymentDate: todayStr(),
     });
-    showToast("Payment recorded");
+    showToast("ගෙවීම වාර්තා කරන ලදී");
     closeModal();
-    renderFees();
+    renderFeeDetail(studentId);
     renderDashboard();
   });
 };
@@ -392,16 +506,33 @@ async function renderDashboard() {
   const month = monthStr();
   const feesSnap = await getDocs(query(collection(db, "fees"), where("month", "==", month)));
   let collected = 0;
-  const paidByStudent = {};
-  feesSnap.forEach((d) => {
-    collected += d.data().amountPaid || 0;
-    paidByStudent[d.data().studentId] = d.data().amountPaid || 0;
-  });
-  const totalDue = students.reduce((sum, s) => sum + (s.monthlyFee || 0), 0);
-  const outstanding = Math.max(totalDue - collected, 0);
-
+  feesSnap.forEach((d) => { collected += d.data().amountPaid || 0; });
   $("#stat-fees-collected").textContent = currency(collected);
-  $("#stat-fees-due").textContent = currency(outstanding);
+
+  // Total pending across ALL students, ALL months since enrollment
+  const allFeesSnap = await getDocs(collection(db, "fees"));
+  const feeMap = {};
+  allFeesSnap.forEach((d) => {
+    const f = d.data();
+    feeMap[`${f.studentId}_${f.month}`] = f.amountPaid || 0;
+  });
+
+  let totalPending = 0;
+  let pendingStudentCount = 0;
+  students.forEach((s) => {
+    const due = s.monthlyFee || 0;
+    if (due <= 0) return;
+    const months = monthsRange(s.createdAt, month);
+    let studentPending = 0;
+    months.forEach((m) => {
+      const paid = feeMap[`${s.id}_${m}`] || 0;
+      if (paid < due) studentPending += (due - paid);
+    });
+    if (studentPending > 0) { totalPending += studentPending; pendingStudentCount++; }
+  });
+
+  $("#stat-fees-due").textContent = currency(totalPending);
+  $("#stat-pending-students").textContent = pendingStudentCount;
 
   const recent = feesSnap.docs
     .map((d) => d.data())
@@ -409,17 +540,17 @@ async function renderDashboard() {
     .slice(0, 8);
 
   if (recent.length === 0) {
-    $("#recent-fees-table").innerHTML = '<div class="empty-state">No fee payments recorded yet this month.</div>';
+    $("#recent-fees-table").innerHTML = '<div class="empty-state">මෙම මාසයේ තවම ගාස්තු ගෙවීම් වාර්තා වී නැත.</div>';
     return;
   }
 
   $("#recent-fees-table").innerHTML = `
     <table>
-      <thead><tr><th>Student</th><th>Amount Paid</th><th>Date</th></tr></thead>
+      <thead><tr><th>සිසුවා</th><th>ගෙවූ මුදල</th><th>දිනය</th></tr></thead>
       <tbody>
         ${recent.map((r) => {
           const s = students.find((st) => st.id === r.studentId);
-          return `<tr><td>${escapeHtml(s?.name || "Unknown")}</td><td>${currency(r.amountPaid)}</td><td>${escapeHtml(r.lastPaymentDate || "-")}</td></tr>`;
+          return `<tr><td>${escapeHtml(s?.name || "නොදන්නා")}</td><td>${currency(r.amountPaid)}</td><td>${escapeHtml(r.lastPaymentDate || "-")}</td></tr>`;
         }).join("")}
       </tbody>
     </table>`;
