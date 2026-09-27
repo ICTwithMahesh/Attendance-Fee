@@ -282,7 +282,7 @@
 
       <!-- FEES -->
       <div class="page" id="page-fees">
-        <div class="page-header"><h2>පන්ති ගාස්තු කළමනාකරණය (හිඟ මුදල් හිලව් කිරීම)</h2></div>
+        <div class="page-header"><h2>පන්ති ගාස්තු කළමනාකරණය (හිඟ මුදල් පන්ති ගාස්තුව කිරීම)</h2></div>
         <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.8rem;">පළමුව ශ්‍රේණියක් තෝරන්න:</p>
         <div class="grade-grid" id="fees-grade-cards"></div>
 
@@ -298,7 +298,7 @@
           <div class="panel">
             <h3 id="fees-table-title" style="font-size:1.1rem; color:var(--accent-blue); margin-bottom: 1rem;">සිසුන්ගේ ගෙවීම් විස්තර</h3>
             <table id="fees-table">
-              <thead><tr><th>නම</th><th>ශ්‍රේණිය</th><th>ගෙවූ මාස (Paid Month Cards)</th><th>අවසාන හිඟ මාසය (ගෙවීමට ඇති)</th><th>ක්‍රියාව සහ WhatsApp</th></tr></thead>
+              <thead><tr><th>නම</th><th>ශ්‍රේණිය</th><th>ගෙවූ මාස (Paid Month Cards)</th><th>අවසන් ගෙවූ දිනය</th><th>අවසාන හිඟ මාසය (ගෙවීමට ඇති)</th><th>ක්‍රියාව සහ WhatsApp</th></tr></thead>
               <tbody id="fees-list"></tbody>
             </table>
           </div>
@@ -605,7 +605,7 @@
       const list = document.getElementById('fees-list');
       const filteredStudents = store.students.filter(s => s.grade === store.selectedFeesGrade && s.name.toLowerCase().includes(search));
 
-      document.getElementById('fees-table-title').innerText = `${store.selectedFeesGrade} - සිසුන්ගේ ගෙවීම් විස්තර සහ හිලව් කිරීම`;
+      document.getElementById('fees-table-title').innerText = `${store.selectedFeesGrade} - සිසුන්ගේ ගෙවීම් විස්තර සහ පන්ති ගාස්තුව කිරීම`;
 
       const rows = filteredStudents.map(s => {
         const studentFees = store.fees.filter(f => f.studentId === s.id);
@@ -615,13 +615,21 @@
         let paidCardsHtml = '';
         if(paidItems.length > 0) {
           paidCardsHtml = `<div class="cards-container">` + paidItems.map(p => `
-            <div class="mini-card paid-month" title="ගෙවා ඇත: ${p.month} (රු. ${p.amount})">
+            <div class="mini-card paid-month" title="ගෙවා ඇත: ${p.month} (රු. ${p.amount}) - දිනය: ${p.paidDate || '-'}">
               <i class="fa-solid fa-circle-check" style="margin-bottom:2px"></i>
               <span style="font-size:0.7rem;">${p.month}</span>
             </div>
           `).join('') + `</div>`;
         } else {
           paidCardsHtml = `<span style="color:var(--text-muted)">ගෙවූ මාස නොමැත</span>`;
+        }
+
+        // අවසන් ගෙවූ දිනය සොයාගැනීම (වඩාත් අලුත්ම ගෙවීම)
+        let lastPaidDateHtml = '<span style="color:var(--text-muted)">-</span>';
+        if(paidItems.length > 0) {
+          const sortedPaid = [...paidItems].sort((a, b) => (a.paidDate || '').localeCompare(b.paidDate || ''));
+          const lastPaid = sortedPaid[sortedPaid.length - 1];
+          lastPaidDateHtml = lastPaid.paidDate || '-';
         }
         
         const pendingFees = studentFees.filter(f => f.status === 'Pending');
@@ -634,6 +642,7 @@
               <td><strong>${s.name}</strong></td>
               <td><span class="badge badge-success">${s.grade}</span></td>
               <td>${paidCardsHtml}</td>
+              <td>${lastPaidDateHtml}</td>
               <td><span style="color:var(--accent-green)">සියලු ගාස්තු ගෙවා ඇත</span></td>
               <td>
                 <button class="btn-whatsapp" onclick="sendWhatsApp('${s.phone}', '${encodeURIComponent(paidMsg)}')">
@@ -652,10 +661,11 @@
             <td><strong>${s.name}</strong></td>
             <td><span class="badge badge-success">${s.grade}</span></td>
             <td>${paidCardsHtml}</td>
+            <td>${lastPaidDateHtml}</td>
             <td><strong style="color:var(--accent-yellow)">${oldestFee.month} (රු. ${oldestFee.amount})</strong></td>
             <td style="display:flex; gap:6px; align-items:center;">
               <button class="btn-primary" style="padding:0.4rem 0.8rem; background:var(--accent-green)" onclick="payOldestFee('${oldestFee.studentId}', '${oldestFee.month}')">
-                <i class="fa-solid fa-coins"></i> හිලව් (${oldestFee.month})
+                <i class="fa-solid fa-coins"></i> පන්ති ගාස්තුව (${oldestFee.month})
               </button>
               <button class="btn-whatsapp" onclick="sendWhatsApp('${s.phone}', '${encodeURIComponent(dueMsg)}')">
                 <i class="fa-brands fa-whatsapp"></i> 
@@ -665,13 +675,14 @@
         `;
       });
 
-      list.innerHTML = rows.join('') || `<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">මෙම ශ්‍රේණියේ සිසුන් හමු නොවීය</td></tr>`;
+      list.innerHTML = rows.join('') || `<tr><td colspan="6" style="text-align:center; color:var(--text-muted)">මෙම ශ්‍රේණියේ සිසුන් හමු නොවීය</td></tr>`;
     }
 
     window.payOldestFee = (studentId, month) => {
       const feeRecord = store.fees.find(f => f.studentId === studentId && f.month === month && f.status === 'Pending');
       if(feeRecord) {
         feeRecord.status = 'Paid';
+        feeRecord.paidDate = new Date().toISOString().slice(0, 10);
         
         // මීළඟ මාසය ස්වයංක්‍රීයව එකතු කිරීම (අදාළ ශ්‍රේණියේ ගාස්තුව සමග)
         let [year, mon] = month.split('-').map(Number);
@@ -688,7 +699,7 @@
         renderFees();
         renderStudents();
         renderDashboard();
-        showToast(`${month} මස සඳහා ගාස්තුව සාර්ථකව හිලව් විය!`);
+        showToast(`${month} මස සඳහා පන්ති ගාස්තුව සාර්ථකව ගෙවා අවසන් විය! (දිනය: ${feeRecord.paidDate})`);
       }
     };
 
