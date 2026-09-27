@@ -607,6 +607,7 @@
           // First time this account logs in - push whatever's local up as the initial cloud copy.
           syncToCloud();
         }
+        if (dedupePendingFees()) store.save();
         renderGradeCards();
         renderDashboard();
         renderStudents();
@@ -621,12 +622,39 @@
       }
     }
 
+    // One-time cleanup: a student should only ever have ONE 'Pending' fee record at a
+    // time (the next one is created automatically once the current one is paid). Older
+    // versions of this app created two Pending records per new student, which double-
+    // counted "පොරොත්තු හිඟ ගාස්තු" on the dashboard. This removes any extra ones,
+    // keeping only the earliest unpaid month per student.
+    function dedupePendingFees() {
+      const byStudent = {};
+      store.fees.forEach(f => {
+        if (f.status === 'Pending') {
+          (byStudent[f.studentId] = byStudent[f.studentId] || []).push(f);
+        }
+      });
+      let changed = false;
+      Object.keys(byStudent).forEach(sid => {
+        const list = byStudent[sid];
+        if (list.length > 1) {
+          list.sort((a, b) => a.month.localeCompare(b.month));
+          for (let i = 1; i < list.length; i++) {
+            const idx = store.fees.indexOf(list[i]);
+            if (idx > -1) { store.fees.splice(idx, 1); changed = true; }
+          }
+        }
+      });
+      return changed;
+    }
+
     function init() {
       document.getElementById('login-logo-img').src = LOGO_BASE64;
       document.getElementById('brand-logo-img').src = LOGO_BASE64;
       document.getElementById('dashboard-logo-img').src = LOGO_BASE64;
       document.getElementById('topbar-logo-img').src = LOGO_BASE64;
       document.getElementById('footer-logo-img').src = NEXORA_LOGO_BASE64;
+      if (dedupePendingFees()) store.save();
       setupPWA();
       setupListeners();
       renderGradeCards();
