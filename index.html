@@ -20,6 +20,37 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- html2canvas: needed so PDF exports render Sinhala text as an image snapshot (jsPDF's built-in fonts have no Sinhala glyphs) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- Firebase Authentication (modular SDK). Bridges into the classic <script> below via window.fbAuth* -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCCICV4aqgdmnR0S8SKow8g_jqlD2_bbfE",
+    authDomain: "my-class-manager-5fa69.firebaseapp.com",
+    projectId: "my-class-manager-5fa69",
+    storageBucket: "my-class-manager-5fa69.firebasestorage.app",
+    messagingSenderId: "151435245146",
+    appId: "1:151435245146:web:a1a687cc5d3dbf31c68a63",
+    measurementId: "G-XTSE5J5M01"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const fbAuth = getAuth(fbApp);
+
+  // Expose a small bridge so the app's regular (non-module) script can use Firebase Auth.
+  // This module script loads asynchronously, so also fire a 'firebase-ready' event in case
+  // the classic script below tries to use the bridge before this has run.
+  window.fbSignIn = (email, password) => signInWithEmailAndPassword(fbAuth, email, password);
+  window.fbSignOut = () => signOut(fbAuth);
+  window.fbOnAuthStateChanged = (cb) => onAuthStateChanged(fbAuth, cb);
+  window.dispatchEvent(new CustomEvent('firebase-ready'));
+</script>
 <style>
   :root {
     --bg-primary: #0f172a;
@@ -263,18 +294,19 @@
       <img id="login-logo-img" src="" alt="ICT Mahesh Logo" class="login-logo" />
       <h1>ICT Mahesh</h1>
       <p class="sub">Class Management System — admin විද්‍යුත් තැපෑලෙන් පිවිසෙන්න</p>
-      <div class="input-group"><label>විද්‍යුත් තැපෑල</label><input id="login-email" type="email" value="admin@ictmahesh.com" /></div>
+      <div class="input-group"><label>විද්‍යුත් තැපෑල</label><input id="login-email" type="email" placeholder="admin@ictmahesh.com" autocomplete="username" /></div>
       <div class="input-group">
         <label>මුරපදය</label>
         <div style="position:relative;">
-          <input id="login-password" type="password" value="password123" style="padding-right:2.6rem;" />
+          <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" style="padding-right:2.6rem;" />
           <button type="button" id="toggle-login-password" aria-label="මුරපදය පෙන්වන්න/සඟවන්න"
             style="position:absolute; top:50%; right:0.6rem; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px;">
             <i class="fa-solid fa-eye" id="toggle-login-password-icon"></i>
           </button>
         </div>
       </div>
-      <button class="btn-primary" id="login-btn" style="width: 100%;"><i class="fa-solid fa-right-to-bracket"></i> පිවිසෙන්න</button>
+      <p class="hidden" id="login-error" style="color:var(--accent-red); font-size:0.8rem; margin-bottom:1rem; text-align:left;"></p>
+      <button class="btn-primary" id="login-btn" style="width: 100%;"><i class="fa-solid fa-right-to-bracket"></i> <span id="login-btn-text">පිවිසෙන්න</span></button>
       <button class="btn-secondary hidden" id="install-app-btn" style="width:100%;margin-top:0.8rem;"><i class="fa-solid fa-mobile-screen-button"></i> Home Screen එකට Install කරන්න</button>
       <p class="hidden" id="ios-install-note" style="margin-top:0.8rem;font-size:0.75rem;color:var(--text-muted);">
         <i class="fa-solid fa-circle-info"></i> iPhone/iPad: Safari හි <b>Share</b> බොත්තම ➜ <b>Add to Home Screen</b> ඔබන්න
@@ -577,24 +609,78 @@
         });
       });
 
-      // දැනට වලංගු වන්නේ මෙම admin පිවිසුම් විස්තර පමණි (Firebase auth මෙම app එකේ නොමැත -
-      // මෙය locally validate කරන login පරීක්ෂාවකි)
-      const VALID_EMAIL = "admin@ictmahesh.com";
-      const VALID_PASSWORD = "password123";
+      // Firebase Authentication (Email/Password) - real login, validated against your Firebase project
+      function firebaseAuthErrorMessage(err) {
+        const code = err && err.code;
+        switch (code) {
+          case 'auth/invalid-email': return 'වැරදි විද්‍යුත් තැපෑල් ආකෘතියකි.';
+          case 'auth/user-not-found':
+          case 'auth/invalid-credential':
+          case 'auth/wrong-password': return 'වැරදි විද්‍යුත් තැපෑලක් හෝ මුරපදයක්! නැවත උත්සාහ කරන්න.';
+          case 'auth/too-many-requests': return 'උත්සාහයන් වැඩිය - මඳක් රැඳී නැවත උත්සාහ කරන්න.';
+          case 'auth/network-request-failed': return 'අන්තර්ජාල සම්බන්ධතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න.';
+          default: return 'පිවිසීමේදී දෝෂයක් සිදු විය! නැවත උත්සාහ කරන්න.';
+        }
+      }
 
-      document.getElementById('login-btn').addEventListener('click', () => {
+      document.getElementById('login-btn').addEventListener('click', async () => {
         const email = document.getElementById('login-email').value.trim();
         const password = document.getElementById('login-password').value;
+        const errorEl = document.getElementById('login-error');
+        const loginBtn = document.getElementById('login-btn');
+        const loginBtnText = document.getElementById('login-btn-text');
+        errorEl.classList.add('hidden');
 
-        if(email !== VALID_EMAIL || password !== VALID_PASSWORD) {
-          showToast("වැරදි විද්‍යුත් තැපෑලක් හෝ මුරපදයක්! නැවත උත්සාහ කරන්න.");
+        if (!email || !password) {
+          errorEl.textContent = 'කරුණාකර විද්‍යුත් තැපෑල සහ මුරපදය ඇතුළත් කරන්න.';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+        if (!window.fbSignIn) {
+          errorEl.textContent = 'පද්ධතිය තවම සූදානම් වෙමින්... තත්පරයක් රැඳී නැවත උත්සාහ කරන්න.';
+          errorEl.classList.remove('hidden');
           return;
         }
 
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('app').classList.remove('hidden');
-        showToast("සාර්ථකව පිවිසුනි!");
+        loginBtn.disabled = true;
+        loginBtnText.textContent = 'පිවිසෙමින්...';
+        try {
+          await window.fbSignIn(email, password);
+          // UI switch happens in the onAuthStateChanged listener below
+          showToast("සාර්ථකව පිවිසුනි!");
+        } catch (err) {
+          console.error(err);
+          errorEl.textContent = firebaseAuthErrorMessage(err);
+          errorEl.classList.remove('hidden');
+        } finally {
+          loginBtn.disabled = false;
+          loginBtnText.textContent = 'පිවිසෙන්න';
+        }
       });
+
+      // Allow Enter key to submit the login form
+      document.getElementById('login-password').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('login-btn').click();
+      });
+
+      // Keep the UI in sync with Firebase's actual auth state (handles page reloads too).
+      // The Firebase module script may still be loading, so wait for it if needed.
+      function watchAuthState() {
+        window.fbOnAuthStateChanged((user) => {
+          if (user) {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+          } else {
+            document.getElementById('app').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+          }
+        });
+      }
+      if (window.fbOnAuthStateChanged) {
+        watchAuthState();
+      } else {
+        window.addEventListener('firebase-ready', watchAuthState, { once: true });
+      }
 
       document.getElementById('toggle-login-password').addEventListener('click', () => {
         const pwInput = document.getElementById('login-password');
@@ -605,9 +691,14 @@
         icon.classList.toggle('fa-eye-slash', isHidden);
       });
 
-      document.getElementById('logout-btn').addEventListener('click', () => {
-        document.getElementById('app').classList.add('hidden');
-        document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        try {
+          await window.fbSignOut();
+          // UI switch is handled by the onAuthStateChanged listener above
+        } catch (err) {
+          console.error(err);
+          showToast("පිටවීමේදී දෝෂයක් සිදු විය!");
+        }
       });
 
       document.getElementById('add-student-btn').addEventListener('click', showAddStudentModal);
