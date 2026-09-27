@@ -203,6 +203,55 @@
     .app-footer .footer-pill { font-size: 0.68rem; padding: 3px 9px; }
     .app-footer .footer-logo-img { max-width: 110px; }
     .modal-body { padding: 1.2rem; }
+
+    /* --- MOBILE TABLE FIX: turn wide multi-column tables (students / attendance /
+       fees / recent payments) into stacked cards so every column - including the
+       4 attendance cards and paid-month cards - is fully visible without a
+       cramped, easy-to-miss horizontal scroll --- */
+    #students-table, #attendance-table, #fees-table, #recent-fees-table { min-width: 0; }
+    #students-table thead, #attendance-table thead, #fees-table thead, #recent-fees-table thead { display: none; }
+    #students-table tbody tr, #attendance-table tbody tr, #fees-table tbody tr, #recent-fees-table tbody tr {
+      display: block; background: rgba(15, 23, 42, 0.55); border: 1px solid var(--border-color);
+      border-radius: 12px; padding: 0.7rem 0.9rem; margin-bottom: 0.8rem;
+    }
+    #students-table tbody td, #attendance-table tbody td, #fees-table tbody td, #recent-fees-table tbody td {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.8rem;
+      padding: 0.5rem 0; border-bottom: 1px dashed var(--border-color); font-size: 0.85rem; text-align: right;
+    }
+    #students-table tbody td:last-child, #attendance-table tbody td:last-child,
+    #fees-table tbody td:last-child, #recent-fees-table tbody td:last-child { border-bottom: none; }
+    #students-table tbody td::before, #attendance-table tbody td::before,
+    #fees-table tbody td::before, #recent-fees-table tbody td::before {
+      content: attr(data-label); font-weight: 600; color: var(--text-muted); font-size: 0.78rem;
+      text-align: left; flex-shrink: 0; margin-right: 0.6rem;
+    }
+    #attendance-table tbody td[data-label=""] { justify-content: flex-end; }
+    #attendance-table tbody td[data-label=""]::before { content: none; }
+
+    /* Columns holding the mini-card groups (attendance day cards / paid month
+       cards) stack below their label instead of squeezing beside it, and the
+       cards themselves shrink slightly so all of them sit cleanly on screen */
+    #attendance-table tbody td[data-label*="කාඩ්"], #fees-table tbody td[data-label*="කාඩ්"] {
+      flex-direction: column; align-items: stretch; text-align: left;
+    }
+    #attendance-table tbody td[data-label*="කාඩ්"]::before, #fees-table tbody td[data-label*="කාඩ්"]::before {
+      margin-bottom: 0.5rem;
+    }
+    #attendance-table .cards-container, #fees-table .cards-container { justify-content: flex-start; }
+    .mini-card { width: 64px; height: 64px; font-size: 0.72rem; }
+
+    /* Action columns with buttons also stack full-width so buttons stay large
+       and tappable instead of being squashed into a narrow scrolling cell */
+    #attendance-table tbody td[data-label="දැනුම්දීම"],
+    #fees-table tbody td[data-label*="ක්‍රියාව"],
+    #students-table tbody td[data-label="ක්‍රියාමාර්ග"] {
+      flex-direction: column; align-items: stretch; gap: 0.5rem;
+    }
+    #attendance-table tbody td[data-label="දැනුම්දීම"] > *,
+    #fees-table tbody td[data-label*="ක්‍රියාව"] > *,
+    #students-table tbody td[data-label="ක්‍රියාමාර්ග"] > * {
+      width: 100%; justify-content: center;
+    }
   }
 </style>
 </head>
@@ -261,7 +310,7 @@
         </div>
         <div class="panel">
           <h3>මෑත ගෙවීම් ක්‍රියාකාරකම්</h3>
-          <table>
+          <table id="recent-fees-table">
             <thead><tr><th>නම</th><th>ශ්‍රේණිය</th><th>ගෙවූ මාසය</th><th>ප්‍රමාණය</th><th>තත්වය</th></tr></thead>
             <tbody id="recent-fees-list"></tbody>
           </table>
@@ -608,11 +657,11 @@
 
       document.getElementById('recent-fees-list').innerHTML = store.fees.filter(f => f.status === 'Paid').slice(-5).reverse().map(f => `
         <tr>
-          <td>${f.name}</td>
-          <td>${f.grade}</td>
-          <td>${f.month}</td>
-          <td>රු. ${f.amount}</td>
-          <td><span class="badge badge-success">ගෙවා ඇත</span></td>
+          <td data-label="නම">${f.name}</td>
+          <td data-label="ශ්‍රේණිය">${f.grade}</td>
+          <td data-label="ගෙවූ මාසය">${f.month}</td>
+          <td data-label="ප්‍රමාණය">රු. ${f.amount}</td>
+          <td data-label="තත්වය"><span class="badge badge-success">ගෙවා ඇත</span></td>
         </tr>
       `).join('') || `<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">ගෙවීම් වාර්තා නොමැත</td></tr>`;
     }
@@ -626,12 +675,12 @@
         const lastPaid = getLastPaidMonth(s.id);
         return `
           <tr>
-            <td>${s.id}</td>
-            <td>${s.name}</td>
-            <td><span class="badge badge-success">${s.grade}</span></td>
-            <td><strong style="color:var(--accent-blue);">${lastPaid}</strong></td>
-            <td>${s.phone}</td>
-            <td style="display:flex; gap:6px;">
+            <td data-label="ID">${s.id}</td>
+            <td data-label="නම">${s.name}</td>
+            <td data-label="ශ්‍රේණිය"><span class="badge badge-success">${s.grade}</span></td>
+            <td data-label="අවසාන වරට ගෙවූ මාසය"><strong style="color:var(--accent-blue);">${lastPaid}</strong></td>
+            <td data-label="දුරකථන අංකය">${s.phone}</td>
+            <td data-label="ක්‍රියාමාර්ග" style="display:flex; gap:6px;">
               <button class="btn-secondary" style="color:var(--accent-blue)" onclick="exportStudentHistoryPDF('${s.id}')" title="ඉතිහාස වාර්තාව (PDF)">
                 <i class="fa-solid fa-file-pdf"></i>
               </button>
@@ -699,15 +748,15 @@
 
         return `
           <tr>
-            <td><input type="checkbox" class="attendance-select-cb" data-id="${s.id}" style="width:16px;height:16px;" /></td>
-            <td><strong>${s.name}</strong></td>
-            <td><span class="badge badge-success">${s.grade}</span></td>
-            <td>
+            <td data-label=""><input type="checkbox" class="attendance-select-cb" data-id="${s.id}" style="width:16px;height:16px;" /></td>
+            <td data-label="සිසුවාගේ නම"><strong>${s.name}</strong></td>
+            <td data-label="ශ්‍රේණිය"><span class="badge badge-success">${s.grade}</span></td>
+            <td data-label="පන්ති දින 4 (කාඩ්)">
               <div class="cards-container">
                 ${cardsHtml}
               </div>
             </td>
-            <td style="display:flex; gap:6px; align-items:center;">
+            <td data-label="දැනුම්දීම" style="display:flex; gap:6px; align-items:center;">
               <button class="btn-whatsapp" onclick="sendWhatsApp('${s.phone}', '${encodeURIComponent(attendanceSummaryText)}')">
                 <i class="fa-brands fa-whatsapp"></i> යවන්න
               </button>
@@ -807,17 +856,17 @@
           const paidMsg = `ICT Mahesh Panti Pahana: ප්‍රිය මව්පිය/භාරකරු වෙතයි, ${s.name} (${s.grade}) දරුවාගේ සියලුම පන්ති ගාස්තු ගෙවා අවසන් කර ඇත. ස්තූතියි!`;
           return `
             <tr>
-              <td><strong>${s.name}</strong></td>
-              <td><span class="badge badge-success">${s.grade}</span></td>
-              <td>${paidCardsHtml}</td>
-              <td>${lastPaidDateHtml}</td>
-              <td><span style="color:var(--accent-green)">සියලු ගාස්තු ගෙවා ඇත</span></td>
-              <td>
+              <td data-label="නම"><strong>${s.name}</strong></td>
+              <td data-label="ශ්‍රේණිය"><span class="badge badge-success">${s.grade}</span></td>
+              <td data-label="ගෙවූ මාස (Paid Month Cards)">${paidCardsHtml}</td>
+              <td data-label="අවසන් ගෙවූ දිනය">${lastPaidDateHtml}</td>
+              <td data-label="අවසාන හිඟ මාසය (ගෙවීමට ඇති)"><span style="color:var(--accent-green)">සියලු ගාස්තු ගෙවා ඇත</span></td>
+              <td data-label="ක්‍රියාව සහ WhatsApp">
                 <button class="btn-whatsapp" onclick="sendWhatsApp('${s.phone}', '${encodeURIComponent(paidMsg)}')">
                   <i class="fa-brands fa-whatsapp"></i> දැනුම් දෙන්න
                 </button>
               </td>
-              <td>
+              <td data-label="වාර්තාව">
                 <button class="btn-secondary" style="color:var(--accent-blue)" onclick="exportStudentFeesPDF('${s.id}')" title="පෙර ගෙවූ ගාස්තු විස්තර (PDF)">
                   <i class="fa-solid fa-file-pdf"></i>
                 </button>
@@ -831,12 +880,12 @@
 
         return `
           <tr>
-            <td><strong>${s.name}</strong></td>
-            <td><span class="badge badge-success">${s.grade}</span></td>
-            <td>${paidCardsHtml}</td>
-            <td>${lastPaidDateHtml}</td>
-            <td><strong style="color:var(--accent-yellow)">${oldestFee.month} (රු. ${oldestFee.amount})</strong></td>
-            <td style="display:flex; gap:6px; align-items:center;">
+            <td data-label="නම"><strong>${s.name}</strong></td>
+            <td data-label="ශ්‍රේණිය"><span class="badge badge-success">${s.grade}</span></td>
+            <td data-label="ගෙවූ මාස (Paid Month Cards)">${paidCardsHtml}</td>
+            <td data-label="අවසන් ගෙවූ දිනය">${lastPaidDateHtml}</td>
+            <td data-label="අවසාන හිඟ මාසය (ගෙවීමට ඇති)"><strong style="color:var(--accent-yellow)">${oldestFee.month} (රු. ${oldestFee.amount})</strong></td>
+            <td data-label="ක්‍රියාව සහ WhatsApp" style="display:flex; gap:6px; align-items:center;">
               <button class="btn-primary" style="padding:0.4rem 0.8rem; background:var(--accent-green)" onclick="payOldestFee('${oldestFee.studentId}', '${oldestFee.month}')">
                 <i class="fa-solid fa-coins"></i> පන්ති ගාස්තුව (${oldestFee.month})
               </button>
@@ -844,7 +893,7 @@
                 <i class="fa-brands fa-whatsapp"></i> 
               </button>
             </td>
-            <td>
+            <td data-label="වාර්තාව">
               <button class="btn-secondary" style="color:var(--accent-blue)" onclick="exportStudentFeesPDF('${s.id}')" title="පෙර ගෙවූ ගාස්තු විස්තර (PDF)">
                 <i class="fa-solid fa-file-pdf"></i>
               </button>
