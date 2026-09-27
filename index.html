@@ -1732,7 +1732,7 @@
 
         if (name && phone) {
           store.students.push({ id: newId, name, grade, phone });
-          store.fees.push({ studentId: newId, name, grade, month: '2026-07', amount: gradeFee, status: 'Paid' });
+          store.fees.push({ studentId: newId, name, grade, month: '2026-07', amount: gradeFee, status: 'Pending' });
           store.fees.push({ studentId: newId, name, grade, month: '2026-08', amount: gradeFee, status: 'Pending' });
           store.save();
           renderGradeCards();
