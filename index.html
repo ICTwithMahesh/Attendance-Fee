@@ -57,10 +57,13 @@
   window.fbSignOut = () => signOut(fbAuth);
   window.fbOnAuthStateChanged = (cb) => onAuthStateChanged(fbAuth, cb);
 
-  // Cloud data: one document per logged-in teacher, keyed by their Firebase Auth UID.
-  window.fbSaveData = (uid, data) => setDoc(doc(fbDb, "classData", uid), data, { merge: true });
+  // Cloud data: ONE shared document for the whole class, used by every logged-in
+  // account. Whoever logs in (any email) sees and edits the same data - it is not
+  // split per teacher account.
+  const SHARED_DOC_ID = "shared";
+  window.fbSaveData = (uid, data) => setDoc(doc(fbDb, "classData", SHARED_DOC_ID), data, { merge: true });
   window.fbLoadData = async (uid) => {
-    const snap = await getDoc(doc(fbDb, "classData", uid));
+    const snap = await getDoc(doc(fbDb, "classData", SHARED_DOC_ID));
     return snap.exists() ? snap.data() : null;
   };
 
