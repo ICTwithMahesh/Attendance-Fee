@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>ICT Mahesh - පන්ති කළමනාකරු</title>
+<title>ICT Mahesh - Class Management System</title>
 <meta name="theme-color" content="#0f172a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -262,9 +262,18 @@
     <div class="login-box">
       <img id="login-logo-img" src="" alt="ICT Mahesh Logo" class="login-logo" />
       <h1>ICT Mahesh</h1>
-      <p class="sub">පන්ති කළමනාකරු — admin විද්‍යුත් තැපෑලෙන් පිවිසෙන්න</p>
+      <p class="sub">Class Management System — admin විද්‍යුත් තැපෑලෙන් පිවිසෙන්න</p>
       <div class="input-group"><label>විද්‍යුත් තැපෑල</label><input id="login-email" type="email" value="admin@ictmahesh.com" /></div>
-      <div class="input-group"><label>මුරපදය</label><input id="login-password" type="password" value="password123" /></div>
+      <div class="input-group">
+        <label>මුරපදය</label>
+        <div style="position:relative;">
+          <input id="login-password" type="password" value="password123" style="padding-right:2.6rem;" />
+          <button type="button" id="toggle-login-password" aria-label="මුරපදය පෙන්වන්න/සඟවන්න"
+            style="position:absolute; top:50%; right:0.6rem; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px;">
+            <i class="fa-solid fa-eye" id="toggle-login-password-icon"></i>
+          </button>
+        </div>
+      </div>
       <button class="btn-primary" id="login-btn" style="width: 100%;"><i class="fa-solid fa-right-to-bracket"></i> පිවිසෙන්න</button>
       <button class="btn-secondary hidden" id="install-app-btn" style="width:100%;margin-top:0.8rem;"><i class="fa-solid fa-mobile-screen-button"></i> Home Screen එකට Install කරන්න</button>
       <p class="hidden" id="ios-install-note" style="margin-top:0.8rem;font-size:0.75rem;color:var(--text-muted);">
@@ -503,7 +512,7 @@
 
       // Build a manifest on the fly so "Add to Home Screen" uses the same logo
       const manifest = {
-        name: "ICT Mahesh - පන්ති කළමනාකරු",
+        name: "ICT Mahesh - Class Management System",
         short_name: "ICT Mahesh",
         start_url: ".",
         display: "standalone",
@@ -568,10 +577,32 @@
         });
       });
 
+      // දැනට වලංගු වන්නේ මෙම admin පිවිසුම් විස්තර පමණි (Firebase auth මෙම app එකේ නොමැත -
+      // මෙය locally validate කරන login පරීක්ෂාවකි)
+      const VALID_EMAIL = "admin@ictmahesh.com";
+      const VALID_PASSWORD = "password123";
+
       document.getElementById('login-btn').addEventListener('click', () => {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        if(email !== VALID_EMAIL || password !== VALID_PASSWORD) {
+          showToast("වැරදි විද්‍යුත් තැපෑලක් හෝ මුරපදයක්! නැවත උත්සාහ කරන්න.");
+          return;
+        }
+
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
         showToast("සාර්ථකව පිවිසුනි!");
+      });
+
+      document.getElementById('toggle-login-password').addEventListener('click', () => {
+        const pwInput = document.getElementById('login-password');
+        const icon = document.getElementById('toggle-login-password-icon');
+        const isHidden = pwInput.type === 'password';
+        pwInput.type = isHidden ? 'text' : 'password';
+        icon.classList.toggle('fa-eye', !isHidden);
+        icon.classList.toggle('fa-eye-slash', isHidden);
       });
 
       document.getElementById('logout-btn').addEventListener('click', () => {
