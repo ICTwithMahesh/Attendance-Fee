@@ -294,7 +294,7 @@
   <div id="toast-root"></div>
 
   <script>
-    const GRADES = ["Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "A/L ICT"];
+    const GRADES = ["Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11"];
 
     // Default 1000 for each grade if not set
     const defaultGradeFees = {};
@@ -309,7 +309,7 @@
       students: JSON.parse(localStorage.getItem('ict_students')) || [
         { id: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', phone: '94771234567' },
         { id: '102', name: 'අමාලි සිල්වා', grade: 'Grade 11', phone: '94719876543' },
-        { id: '103', name: 'නලින් ප්‍රනාන්දු', grade: 'A/L ICT', phone: '94755555555' },
+        { id: '103', name: 'නලින් ප්‍රනාන්දු', grade: 'Grade 9', phone: '94755555555' },
         { id: '104', name: 'සහන් තාරක', grade: 'Grade 6', phone: '94781112223' }
       ],
       fees: JSON.parse(localStorage.getItem('ict_fees')) || [
@@ -318,7 +318,7 @@
         { studentId: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', month: '2026-08', amount: 1000, status: 'Pending' },
         { studentId: '102', name: 'අමාලි සිල්වා', grade: 'Grade 11', month: '2026-07', amount: 1000, status: 'Paid' },
         { studentId: '102', name: 'අමාලි සිල්වා', grade: 'Grade 11', month: '2026-08', amount: 1000, status: 'Pending' },
-        { studentId: '103', name: 'නලින් ප්‍රනාන්දු', grade: 'A/L ICT', month: '2026-07', amount: 1000, status: 'Paid' },
+        { studentId: '103', name: 'නලින් ප්‍රනාන්දු', grade: 'Grade 9', month: '2026-07', amount: 1000, status: 'Paid' },
         { studentId: '104', name: 'සහන් තාරක', grade: 'Grade 6', month: '2026-06', amount: 1000, status: 'Pending' }
       ],
       attendance: JSON.parse(localStorage.getItem('ict_attendance')) || {},
