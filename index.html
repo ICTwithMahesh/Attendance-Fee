@@ -264,10 +264,29 @@
               <button class="btn-secondary" onclick="exportAttendancePDF()"><i class="fa-solid fa-file-pdf" style="color:var(--accent-red)"></i> PDF</button>
             </div>
           </div>
+          <div class="panel" style="margin-bottom:1rem;">
+            <p style="font-size:0.85rem; color: var(--text-muted); margin-bottom:0.6rem;">
+              <i class="fa-solid fa-circle-info"></i> සිසුන් කිහිප දෙනෙකු එකවර සලකුණු කිරීමට: පහත ලැයිස්තුවෙන් සිසුන් ටික් කර, දිනය තෝරා, "පැමිණ ඇත" හෝ "පැමිණ නැත" බොත්තම ඔබන්න. (තනි සිසුවෙකුගේ තනි දිනයක් වෙනස් කිරීමට කලින් පරිදිම කාඩ් එක මත ක්ලික් කළ හැක.)
+            </p>
+            <div class="toolbar" style="flex-wrap: wrap; gap: 0.6rem;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem;">
+                <input type="checkbox" id="attendance-select-all" onchange="toggleSelectAllAttendance(this.checked)" style="width:16px;height:16px;" />
+                සියල්ල තෝරන්න
+              </label>
+              <select id="bulk-attendance-day" style="padding:0.4rem 0.6rem; border-radius:8px;"></select>
+              <button class="btn-primary" style="background:var(--accent-green)" onclick="bulkMarkAttendance('present')">
+                <i class="fa-solid fa-check"></i> තෝරාගත් අයට පැමිණ ඇත
+              </button>
+              <button class="btn-primary" style="background:var(--accent-red)" onclick="bulkMarkAttendance('absent')">
+                <i class="fa-solid fa-xmark"></i> තෝරාගත් අයට පැමිණ නැත
+              </button>
+            </div>
+          </div>
           <div class="panel">
             <table id="attendance-table">
               <thead>
                 <tr>
+                  <th><input type="checkbox" id="attendance-select-all-th" onchange="toggleSelectAllAttendance(this.checked)" style="width:16px;height:16px;" /></th>
                   <th>සිසුවාගේ නම</th>
                   <th>ශ්‍රේණිය</th>
                   <th>පන්ති දින 4 (කාඩ්)</th>
@@ -298,7 +317,7 @@
           <div class="panel">
             <h3 id="fees-table-title" style="font-size:1.1rem; color:var(--accent-blue); margin-bottom: 1rem;">සිසුන්ගේ ගෙවීම් විස්තර</h3>
             <table id="fees-table">
-              <thead><tr><th>නම</th><th>ශ්‍රේණිය</th><th>ගෙවූ මාස (Paid Month Cards)</th><th>අවසන් ගෙවූ දිනය</th><th>අවසාන හිඟ මාසය (ගෙවීමට ඇති)</th><th>ක්‍රියාව සහ WhatsApp</th></tr></thead>
+              <thead><tr><th>නම</th><th>ශ්‍රේණිය</th><th>ගෙවූ මාස (Paid Month Cards)</th><th>අවසන් ගෙවූ දිනය</th><th>අවසාන හිඟ මාසය (ගෙවීමට ඇති)</th><th>ක්‍රියාව සහ WhatsApp</th><th>වාර්තාව</th></tr></thead>
               <tbody id="fees-list"></tbody>
             </table>
           </div>
@@ -526,6 +545,19 @@
 
       document.getElementById('attendance-table-title').innerText = `${store.selectedAttendanceGrade} - සිසුන්ගේ පන්ති දින 4 පැමිණීම`;
 
+      // Keep the day dropdown in sync with the configured session dates (days 1-4)
+      const daySelect = document.getElementById('bulk-attendance-day');
+      if (daySelect) {
+        daySelect.innerHTML = Object.keys(store.sessionDates).map(dayNum =>
+          `<option value="${dayNum}">දිනය ${dayNum} (${store.sessionDates[dayNum]})</option>`
+        ).join('');
+      }
+      // Reset the "select all" checkboxes on every re-render since the row set can change
+      const selectAllToolbar = document.getElementById('attendance-select-all');
+      const selectAllHeader = document.getElementById('attendance-select-all-th');
+      if (selectAllToolbar) selectAllToolbar.checked = false;
+      if (selectAllHeader) selectAllHeader.checked = false;
+
       list.innerHTML = filtered.length ? filtered.map(s => {
         let cardsHtml = '';
         let attendanceSummaryText = `ICT Mahesh Panti Pahana - ${s.name} (${s.grade}) පැමිණීමේ වාර්තාව: `;
@@ -561,6 +593,7 @@
 
         return `
           <tr>
+            <td><input type="checkbox" class="attendance-select-cb" data-id="${s.id}" style="width:16px;height:16px;" /></td>
             <td><strong>${s.name}</strong></td>
             <td><span class="badge badge-success">${s.grade}</span></td>
             <td>
@@ -578,8 +611,37 @@
             </td>
           </tr>
         `;
-      }).join('') : `<tr><td colspan="4" style="text-align:center; color: var(--text-muted)">මෙම ශ්‍රේණියේ සිසුන් නොමැත</td></tr>`;
+      }).join('') : `<tr><td colspan="5" style="text-align:center; color: var(--text-muted)">මෙම ශ්‍රේණියේ සිසුන් නොමැත</td></tr>`;
     }
+
+    // Selects/deselects every visible attendance checkbox in one go (keeps the
+    // per-cell click-to-cycle method below fully intact/unchanged).
+    window.toggleSelectAllAttendance = (checked) => {
+      document.querySelectorAll('.attendance-select-cb').forEach(cb => cb.checked = checked);
+      const selectAllToolbar = document.getElementById('attendance-select-all');
+      const selectAllHeader = document.getElementById('attendance-select-all-th');
+      if (selectAllToolbar) selectAllToolbar.checked = checked;
+      if (selectAllHeader) selectAllHeader.checked = checked;
+    };
+
+    // Bulk-marks every ticked student as present/absent for the chosen day, in
+    // addition to (not instead of) the existing single-cell cycle method.
+    window.bulkMarkAttendance = (status) => {
+      const dayNum = document.getElementById('bulk-attendance-day').value;
+      const dateKey = store.sessionDates[dayNum];
+      const selectedIds = Array.from(document.querySelectorAll('.attendance-select-cb:checked')).map(cb => cb.dataset.id);
+
+      if (!dayNum) { showToast("කරුණාකර දිනයක් තෝරන්න!"); return; }
+      if (selectedIds.length === 0) { showToast("කරුණාකර සිසුන් තෝරන්න!"); return; }
+
+      selectedIds.forEach(id => {
+        store.attendance[`${dateKey}_${id}`] = status;
+      });
+
+      store.save();
+      renderAttendance();
+      showToast(`සිසුන් ${selectedIds.length} දෙනෙකුගේ පැමිණීම යාවත්කාලීන විය!`);
+    };
 
     window.cycleAttendance = (studentId, dayNum) => {
       const dateKey = store.sessionDates[dayNum];
@@ -649,6 +711,11 @@
                   <i class="fa-brands fa-whatsapp"></i> දැනුම් දෙන්න
                 </button>
               </td>
+              <td>
+                <button class="btn-secondary" style="color:var(--accent-blue)" onclick="exportStudentFeesPDF('${s.id}')" title="පෙර ගෙවූ ගාස්තු විස්තර (PDF)">
+                  <i class="fa-solid fa-file-pdf"></i>
+                </button>
+              </td>
             </tr>
           `;
         }
@@ -671,11 +738,16 @@
                 <i class="fa-brands fa-whatsapp"></i> 
               </button>
             </td>
+            <td>
+              <button class="btn-secondary" style="color:var(--accent-blue)" onclick="exportStudentFeesPDF('${s.id}')" title="පෙර ගෙවූ ගාස්තු විස්තර (PDF)">
+                <i class="fa-solid fa-file-pdf"></i>
+              </button>
+            </td>
           </tr>
         `;
       });
 
-      list.innerHTML = rows.join('') || `<tr><td colspan="6" style="text-align:center; color:var(--text-muted)">මෙම ශ්‍රේණියේ සිසුන් හමු නොවීය</td></tr>`;
+      list.innerHTML = rows.join('') || `<tr><td colspan="7" style="text-align:center; color:var(--text-muted)">මෙම ශ්‍රේණියේ සිසුන් හමු නොවීය</td></tr>`;
     }
 
     window.payOldestFee = (studentId, month) => {
@@ -1086,6 +1158,111 @@
 
         doc.save(`attendance_history_${student.id}.pdf`);
         showToast("පැමිණීමේ වාර්තාව බාගත කරන ලදී!");
+      } catch (err) {
+        console.error(err);
+        showToast("වාර්තාව සෑදීමේදී දෝෂයක් සිදු විය!");
+      } finally {
+        document.body.removeChild(el);
+      }
+    }
+
+    // Builds an off-screen, styled fees-only report for one student, covering every
+    // fee record (paid and pending) for that student, sorted by month.
+    function buildStudentFeesElement(student) {
+      const el = document.createElement('div');
+      el.style.position = 'fixed';
+      el.style.left = '-9999px';
+      el.style.top = '0';
+      el.style.width = '720px';
+      el.style.background = '#0f172a';
+      el.style.color = '#f8fafc';
+      el.style.padding = '24px';
+      el.style.fontFamily = "'Inter', system-ui, sans-serif";
+
+      const feeRecords = store.fees.filter(f => f.studentId === student.id).slice().sort((a, b) => a.month.localeCompare(b.month));
+      const paidRecords = feeRecords.filter(f => f.status === 'Paid');
+      const pendingRecords = feeRecords.filter(f => f.status === 'Pending');
+      const totalPaid = paidRecords.reduce((sum, f) => sum + f.amount, 0);
+      const totalPending = pendingRecords.reduce((sum, f) => sum + f.amount, 0);
+
+      const rows = feeRecords.length ? feeRecords.map(f => {
+        const paid = f.status === 'Paid';
+        return `<tr>
+          <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.12)">${f.month}</td>
+          <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.12)">රු. ${f.amount}</td>
+          <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.12);color:${paid ? '#10b981' : '#f59e0b'};font-weight:600">${paid ? 'ගෙවා ඇත (Paid)' : 'ගෙවීමට ඇත (Pending)'}</td>
+          <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.12)">${f.paidDate || '-'}</td>
+        </tr>`;
+      }).join('') : `<tr><td colspan="4" style="padding:8px;text-align:center;color:#94a3b8">ගාස්තු වාර්තා නොමැත</td></tr>`;
+
+      el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:4px;">
+          <img src="${LOGO_BASE64}" alt="ICT Mahesh Logo" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #3b82f6;" />
+          <h2 style="margin:0;">ICT Mahesh - ගාස්තු ගෙවීම් විස්තර වාර්තාව</h2>
+        </div>
+        <p style="color:#94a3b8;margin-bottom:18px;font-size:13px;">වාර්තාව ජනනය කළ දිනය: ${new Date().toLocaleDateString('si-LK')}</p>
+        <div style="margin-bottom:20px;padding:14px;background:rgba(59,130,246,0.12);border:1px solid rgba(255,255,255,0.12);border-radius:10px;line-height:1.6;">
+          <div><strong>නම:</strong> ${student.name}</div>
+          <div><strong>ශිෂ්‍ය ID:</strong> ${student.id}</div>
+          <div><strong>ශ්‍රේණිය:</strong> ${student.grade}</div>
+          <div><strong>දුරකථනය:</strong> ${student.phone}</div>
+        </div>
+        <div style="display:flex;gap:28px;margin-bottom:20px;">
+          <div><div style="color:#10b981;font-size:20px;font-weight:700;">රු. ${totalPaid}</div><div style="color:#94a3b8;font-size:12px;">මුළු ගෙවූ මුදල (${paidRecords.length} මාස)</div></div>
+          <div><div style="color:#f59e0b;font-size:20px;font-weight:700;">රු. ${totalPending}</div><div style="color:#94a3b8;font-size:12px;">හිඟ මුදල (${pendingRecords.length} මාස)</div></div>
+        </div>
+        <h3 style="margin-bottom:8px;color:#3b82f6;">ගාස්තු ගෙවීම් ඉතිහාසය (මාසය අනුව)</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead><tr>
+            <th style="text-align:left;padding:8px;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.25)">මාසය</th>
+            <th style="text-align:left;padding:8px;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.25)">ප්‍රමාණය</th>
+            <th style="text-align:left;padding:8px;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.25)">තත්වය</th>
+            <th style="text-align:left;padding:8px;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.25)">ගෙවූ දිනය</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+      return el;
+    }
+
+    window.exportStudentFeesPDF = async function(studentId) {
+      const student = store.students.find(s => s.id === studentId);
+      if (!student) { showToast("සිසුවා හමු නොවීය!"); return; }
+
+      showToast("ගාස්තු වාර්තාව සකසමින්...");
+      const el = buildStudentFeesElement(student);
+      document.body.appendChild(el);
+
+      try {
+        const canvas = await html2canvas(el, { backgroundColor: '#0f172a', scale: 2, useCORS: true });
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'pt', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 30;
+        const imgWidth = pageWidth - margin * 2;
+        const pageUsableHeight = pageHeight - margin * 2;
+        const pxPerPt = canvas.width / imgWidth;
+        const sliceHeightPx = pageUsableHeight * pxPerPt;
+
+        let renderedPx = 0, firstPage = true;
+        while (renderedPx < canvas.height) {
+          const thisSlicePx = Math.min(sliceHeightPx, canvas.height - renderedPx);
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = thisSlicePx;
+          sliceCanvas.getContext('2d').drawImage(canvas, 0, renderedPx, canvas.width, thisSlicePx, 0, 0, canvas.width, thisSlicePx);
+          const sliceImgHeight = (thisSlicePx * imgWidth) / canvas.width;
+
+          if (!firstPage) doc.addPage();
+          doc.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, imgWidth, sliceImgHeight);
+          renderedPx += thisSlicePx;
+          firstPage = false;
+        }
+
+        doc.save(`fees_history_${student.id}.pdf`);
+        showToast("ගාස්තු වාර්තාව බාගත කරන ලදී!");
       } catch (err) {
         console.error(err);
         showToast("වාර්තාව සෑදීමේදී දෝෂයක් සිදු විය!");
