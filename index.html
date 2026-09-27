@@ -622,6 +622,12 @@
       }
     }
 
+    // Real current month as "YYYY-MM", used to decide whether a scheduled Pending
+    // fee is actually due yet (not just a future month created ahead of time).
+    function getCurrentMonthStr() {
+      return new Date().toISOString().slice(0, 7);
+    }
+
     // One-time cleanup: a student should only ever have ONE 'Pending' fee record at a
     // time (the next one is created automatically once the current one is paid). Older
     // versions of this app created two Pending records per new student, which double-
@@ -913,7 +919,11 @@
     function renderDashboard() {
       document.getElementById('stat-total-students').innerText = store.students.length;
       const paid = store.fees.filter(f => f.status === 'Paid').reduce((sum, f) => sum + f.amount, 0);
-      const due = store.fees.filter(f => f.status === 'Pending').reduce((sum, f) => sum + f.amount, 0);
+      // Only count a Pending fee as "due" once its own month has actually started -
+      // a fee scheduled for a future month (auto-created ahead of time when the
+      // previous month is paid) isn't outstanding yet, so it shouldn't inflate this.
+      const currentMonthStr = getCurrentMonthStr();
+      const due = store.fees.filter(f => f.status === 'Pending' && f.month <= currentMonthStr).reduce((sum, f) => sum + f.amount, 0);
 
       document.getElementById('stat-fees-collected').innerText = `රු. ${paid}`;
       document.getElementById('stat-fees-due').innerText = `රු. ${due}`;
@@ -1788,7 +1798,7 @@
           // (and gets its own Pending record) automatically once this one is paid,
           // via payOldestFee. Creating both upfront was double-counting the dashboard's
           // "පොරොත්තු හිඟ ගාස්තු" total.
-          store.fees.push({ studentId: newId, name, grade, month: '2026-07', amount: gradeFee, status: 'Pending' });
+          store.fees.push({ studentId: newId, name, grade, month: getCurrentMonthStr(), amount: gradeFee, status: 'Pending' });
           store.save();
           renderGradeCards();
           renderStudents();
