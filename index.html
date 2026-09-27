@@ -1756,8 +1756,11 @@
 
         if (name && phone) {
           store.students.push({ id: newId, name, grade, phone });
+          // Only one month is actually due right now - the next month becomes due
+          // (and gets its own Pending record) automatically once this one is paid,
+          // via payOldestFee. Creating both upfront was double-counting the dashboard's
+          // "පොරොත්තු හිඟ ගාස්තු" total.
           store.fees.push({ studentId: newId, name, grade, month: '2026-07', amount: gradeFee, status: 'Pending' });
-          store.fees.push({ studentId: newId, name, grade, month: '2026-08', amount: gradeFee, status: 'Pending' });
           store.save();
           renderGradeCards();
           renderStudents();
