@@ -185,6 +185,17 @@
     border: 1px solid var(--accent-red); 
     color: var(--accent-red); 
   }
+  /* Marks whichever card's date is today's real date, so it's easy to find the
+     current session at a glance regardless of its status (marked or not). */
+  .mini-card.today-card {
+    box-shadow: 0 0 0 2px var(--accent-yellow), 0 4px 6px rgba(0, 0, 0, 0.2);
+  }
+  .mini-card.today-card::after {
+    content: 'අද'; position: absolute; top: -8px; right: -6px;
+    background: var(--accent-yellow); color: #1e293b; font-size: 0.6rem; font-weight: 700;
+    padding: 1px 5px; border-radius: 8px; line-height: 1.4;
+  }
+  .mini-card { position: relative; }
 
   .badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
   .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
@@ -826,7 +837,7 @@
       const daySelect = document.getElementById('bulk-attendance-day');
       if (daySelect) {
         daySelect.innerHTML = Object.keys(store.sessionDates).map(dayNum =>
-          `<option value="${dayNum}">දිනය ${dayNum} (${store.sessionDates[dayNum]})</option>`
+          `<option value="${dayNum}">දිනය ${dayNum}</option>`
         ).join('');
       }
       // Reset the "select all" checkboxes on every re-render since the row set can change
@@ -846,13 +857,13 @@
           const status = store.attendance[recordKey];
           if(dateKey === todayKey) todayStatus = status;
 
-          let statusClass = '';
+          let statusClass = dateKey === todayKey ? 'today-card' : '';
           let statusText = `${dayNum} දින`;
           if(status === 'present') {
-            statusClass = 'present';
+            statusClass += ' present';
             statusText = `<i class="fa-solid fa-check" style="margin-bottom:3px"></i><br>${dayNum} දින`;
           } else if(status === 'absent') {
-            statusClass = 'absent';
+            statusClass += ' absent';
             statusText = `<i class="fa-solid fa-xmark" style="margin-bottom:3px"></i><br>${dayNum} දින`;
           } else {
             statusText = `<i class="fa-regular fa-clock" style="margin-bottom:3px"></i><br>${dayNum} දින`;
