@@ -363,6 +363,7 @@
       <div class="sidebar-footer">
         <div class="email" id="current-user-email">admin@ictmahesh.com</div>
         <div id="cloud-status" style="font-size:0.7rem; margin-top:4px; opacity:0.85;"></div>
+        <button class="btn-secondary" id="refresh-cloud-btn" style="width:100%; margin-top:6px; font-size:0.75rem; padding:6px;"><i class="fa-solid fa-arrows-rotate"></i> Cloud එකෙන් Refresh</button>
         <button class="btn-secondary" id="logout-btn" style="width:100%"><i class="fa-solid fa-arrow-right-from-bracket"></i> ඉවත් වන්න</button>
       </div>
     </div>
@@ -764,6 +765,8 @@
         window.fbOnAuthStateChanged((user) => {
           if (user) {
             currentUid = user.uid;
+            const emailEl = document.getElementById('current-user-email');
+            if (emailEl) emailEl.textContent = user.email || currentUid;
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
             loadFromCloud(currentUid);
@@ -802,6 +805,15 @@
       document.getElementById('add-student-btn').addEventListener('click', showAddStudentModal);
       document.getElementById('student-search').addEventListener('input', renderStudents);
       document.getElementById('fees-search').addEventListener('input', renderFees);
+
+      document.getElementById('refresh-cloud-btn').addEventListener('click', () => {
+        if (!currentUid) {
+          showToast('ඔබ login වී නොමැත - Cloud refresh කළ නොහැක');
+          return;
+        }
+        loadFromCloud(currentUid);
+        showToast('Cloud එකෙන් නවතම දත්ත ලබාගනිමින්...');
+      });
     }
 
     function getLastPaidMonth(studentId) {
