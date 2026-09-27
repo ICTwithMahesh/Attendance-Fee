@@ -2,140 +2,731 @@
 <html lang="si">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ICT Mahesh - පන්ති කළමනාකරු</title>
-<link rel="manifest" href="manifest.json" />
-<link rel="icon" href="assets/icon-192.png" />
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
-<meta name="theme-color" content="#0f1115" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="ICT Mahesh" />
-<link rel="stylesheet" href="style.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- jsPDF and SheetJS for reports -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: rgba(30, 41, 59, 0.7);
+    --accent-blue: #3b82f6;
+    --accent-purple: #8b5cf6;
+    --accent-green: #10b981;
+    --accent-red: #ef4444;
+    --accent-yellow: #f59e0b;
+    --accent-whatsapp: #25d366;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+  body { background: radial-gradient(circle at top right, #1e1b4b, #0f172a); color: var(--text-main); min-height: 100vh; display: flex; overflow-x: hidden; }
+  .hidden { display: none !important; }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 600; cursor: pointer;
+    transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+  }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
+  
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text-main);
+    padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;
+  }
+  .btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+
+  .btn-whatsapp {
+    background: rgba(37, 211, 102, 0.15); border: 1px solid var(--accent-whatsapp); color: var(--accent-whatsapp);
+    padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px; transition: all 0.3s ease;
+  }
+  .btn-whatsapp:hover { background: var(--accent-whatsapp); color: white; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4); }
+
+  .btn-group-reports { display: flex; gap: 5px; }
+
+  #login-screen { position: fixed; inset: 0; background: radial-gradient(circle at center, #1e1b4b, #0f172a); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+  .login-box { background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--border-color); padding: 2.5rem; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; }
+  .login-logo { width: 90px; height: 90px; border-radius: 50%; margin-bottom: 1rem; object-fit: cover; border: 3px solid var(--accent-blue); box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+  .login-box h1 { font-size: 1.8rem; margin-bottom: 0.5rem; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .login-box p.sub { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
+  .input-group { text-align: left; margin-bottom: 1.2rem; }
+  .input-group label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+  .input-group input, select, .toolbar input { width: 100%; padding: 0.75rem 1rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; color: white; outline: none; }
+
+  #app { display: flex; width: 100vw; height: 100vh; overflow: hidden; }
+  .sidebar { width: 260px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 1.5rem 1rem; }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 2rem; }
+  .brand img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-blue); }
+  .brand span { font-weight: 700; font-size: 1.1rem; display: flex; flex-direction: column; }
+  .brand small { font-size: 0.7rem; color: var(--text-muted); font-weight: 400; }
+  
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 0.8rem 1rem; border-radius: 10px; color: var(--text-muted); cursor: pointer; margin-bottom: 0.5rem; transition: all 0.3s ease; }
+  .nav-item:hover, .nav-item.active { background: linear-gradient(90deg, rgba(59, 130, 246, 0.2), transparent); color: var(--accent-blue); border-left: 4px solid var(--accent-blue); }
+  .sidebar-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); }
+  .sidebar-footer .email { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem; }
+
+  .main { flex: 1; padding: 2rem; overflow-y: auto; }
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem; margin-bottom: 2rem; }
+  .stat-card { padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); backdrop-filter: blur(10px); background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 41, 59, 0.7)); }
+  .stat-card .label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+  .stat-card .value { font-size: 1.8rem; font-weight: 700; }
+
+  .grade-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .grade-card {
+    background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 1rem;
+    text-align: center; cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden;
+  }
+  .grade-card:hover, .grade-card.active {
+    transform: translateY(-3px); border-color: var(--accent-blue);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(30, 41, 59, 0.9));
+  }
+  .grade-card.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--accent-blue); }
+  .grade-card i { font-size: 1.5rem; margin-bottom: 0.4rem; color: var(--accent-blue); }
+  .grade-card h4 { font-size: 1rem; margin-bottom: 0.2rem; }
+  .grade-card p { font-size: 0.7rem; color: var(--text-muted); }
+
+  .panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; backdrop-filter: blur(10px); margin-bottom: 1.5rem; }
+  .toolbar { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  table { width: 100%; border-collapse: collapse; text-align: left; }
+  th, td { padding: 0.9rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+  th { color: var(--text-muted); font-size: 0.85rem; }
+  tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+  /* --- 3D HOVER ATTENDANCE CARDS (UPDATED) --- */
+  .attendance-cards-container { display: flex; gap: 12px; perspective: 1000px; }
+  .mini-card {
+    width: 65px; height: 75px; border-radius: 10px; border: 1px solid var(--border-color);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 0.85rem; cursor: pointer; background: rgba(15, 23, 42, 0.6);
+    color: var(--text-muted); font-weight: 600;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform-style: preserve-3d;
+  }
+  .mini-card:hover {
+    transform: translateY(-8px) scale(1.08) rotateX(8deg) rotateY(-8deg);
+    border-color: var(--accent-blue);
+    box-shadow: 0 15px 25px rgba(59, 130, 246, 0.3);
+    color: var(--text-main);
+  }
+  .mini-card.present { 
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(15, 23, 42, 0.8)); 
+    border: 1px solid var(--accent-green); 
+    color: var(--accent-green); 
+    box-shadow: 0 6px 15px rgba(16, 185, 129, 0.2);
+  }
+  .mini-card.present:hover {
+    box-shadow: 0 15px 25px rgba(16, 185, 129, 0.4);
+  }
+  .mini-card.absent { 
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(15, 23, 42, 0.8)); 
+    border: 1px solid var(--accent-red); 
+    color: var(--accent-red); 
+    box-shadow: 0 6px 15px rgba(239, 68, 68, 0.2);
+  }
+  .mini-card.absent:hover {
+    box-shadow: 0 15px 25px rgba(239, 68, 68, 0.4);
+  }
+
+  .badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+  .badge-danger { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+  .badge-warn { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+  .modal-body { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 2rem; width: 90%; max-width: 450px; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg-secondary); border-left: 4px solid var(--accent-blue); padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); z-index: 3000; }
+
+  @media (max-width: 768px) {
+    #app { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; padding: 1rem; }
+    .grade-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
 </head>
 <body>
 
-  <!-- ===================== LOGIN ===================== -->
+  <!-- LOGIN SCREEN -->
   <div id="login-screen">
     <div class="login-box">
-      <img src="assets/logo.png" alt="" class="login-logo" onerror="this.style.display='none'" />
+      <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='8' r='5'/><path d='M20 21a8 8 0 0 0-16 0'/></svg>" alt="Logo" class="login-logo" />
       <h1>ICT Mahesh</h1>
-      <p class="sub">පන්ති කළමනාකරු — ඔබගේ admin විද්‍යුත් තැපෑලෙන් පිවිසෙන්න</p>
-      <label for="login-email">විද්‍යුත් තැපෑල</label>
-      <input id="login-email" type="email" placeholder="you@example.com" autocomplete="username" />
-      <label for="login-password">මුරපදය</label>
-      <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
-      <button class="btn-primary" id="login-btn">පිවිසෙන්න</button>
-      <div id="login-error"></div>
+      <p class="sub">පන්ති කළමනාකරු — admin විද්‍යුත් තැපෑලෙන් පිවිසෙන්න</p>
+      <div class="input-group"><label>විද්‍යුත් තැපෑල</label><input id="login-email" type="email" value="admin@ictmahesh.com" /></div>
+      <div class="input-group"><label>මුරපදය</label><input id="login-password" type="password" value="password123" /></div>
+      <button class="btn-primary" id="login-btn" style="width: 100%;"><i class="fa-solid fa-right-to-bracket"></i> පිවිසෙන්න</button>
     </div>
   </div>
 
-  <!-- ===================== APP ===================== -->
+  <!-- MAIN APP CONTAINER -->
   <div id="app" class="hidden">
     <div class="sidebar">
       <div class="brand">
-        <img src="assets/logo.png" alt="" class="brand-logo" onerror="this.style.display='none'" />
+        <img src="8e084412-913b-4da2-9a73-0a37091f1621_2.png" alt="ICT Mahesh Logo" />
         <span>ICT Mahesh<small>පැමිණීම සහ ගාස්තු</small></span>
       </div>
-      <div class="nav-item active" data-page="dashboard">මුල් පිටුව</div>
-      <div class="nav-item" data-page="students">සිසුන්</div>
-      <div class="nav-item" data-page="attendance">පැමිණීම</div>
-      <div class="nav-item" data-page="fees">ගාස්තු</div>
+      <div class="nav-item active" data-page="dashboard"><i class="fa-solid fa-chart-pie"></i> මුල් පිටුව</div>
+      <div class="nav-item" data-page="students"><i class="fa-solid fa-user-graduate"></i> සිසුන්</div>
+      <div class="nav-item" data-page="attendance"><i class="fa-solid fa-calendar-check"></i> පැමිණීම</div>
+      <div class="nav-item" data-page="fees"><i class="fa-solid fa-credit-card"></i> ගාස්තු</div>
       <div class="sidebar-footer">
-        <div class="email" id="current-user-email"></div>
-        <button class="btn-secondary" id="logout-btn" style="width:100%">ඉවත් වන්න</button>
+        <div class="email" id="current-user-email">admin@ictmahesh.com</div>
+        <button class="btn-secondary" id="logout-btn" style="width:100%"><i class="fa-solid fa-arrow-right-from-bracket"></i> ඉවත් වන්න</button>
       </div>
     </div>
 
     <div class="main">
-
-      <!-- ---------- DASHBOARD ---------- -->
+      <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
         <div class="page-header"><h2>මුල් පිටුව</h2></div>
         <div class="stat-grid">
-          <div class="stat-card">
-            <div class="label">මුළු සිසුන් ගණන</div>
-            <div class="value" id="stat-total-students">0</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">අද පැමිණි</div>
-            <div class="value green" id="stat-present-today">0</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">අද නොපැමිණි</div>
-            <div class="value danger" id="stat-absent-today">0</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">මෙම මාසයේ එකතු කළ ගාස්තු</div>
-            <div class="value green" id="stat-fees-collected">0</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">මුළු පොරොත්තු ගාස්තුව (සියලුම සිසුන්)</div>
-            <div class="value danger" id="stat-fees-due">0</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">ගාස්තු පොරොත්තු සිසුන් ගණන</div>
-            <div class="value warn" id="stat-pending-students">0</div>
-          </div>
+          <div class="stat-card"><div class="label">මුළු සිසුන් ගණන</div><div class="value" id="stat-total-students">0</div></div>
+          <div class="stat-card"><div class="label">මෙම මාසයේ ගෙවීම්</div><div class="value" style="color: var(--accent-green);" id="stat-fees-collected">රු. 0</div></div>
+          <div class="stat-card"><div class="label">පොරොත්තු හිඟ ගාස්තු</div><div class="value" style="color: var(--accent-red);" id="stat-fees-due">රු. 0</div></div>
         </div>
         <div class="panel">
           <h3>මෑත ගෙවීම් ක්‍රියාකාරකම්</h3>
-          <div id="recent-fees-table"></div>
+          <table>
+            <thead><tr><th>නම</th><th>ශ්‍රේණිය</th><th>ගෙවූ මාසය</th><th>ප්‍රමාණය</th><th>තත්වය</th></tr></thead>
+            <tbody id="recent-fees-list"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- ---------- STUDENTS ---------- -->
+      <!-- STUDENTS -->
       <div class="page" id="page-students">
         <div class="page-header">
-          <h2>සිසුන්</h2>
-          <button class="btn-primary" style="width:auto" id="add-student-btn">+ සිසුවෙකු එකතු කරන්න</button>
+          <h2>සිසුන් (ශ්‍රේණිය තෝරන්න)</h2>
+          <button class="btn-primary" id="add-student-btn"><i class="fa-solid fa-plus"></i> සිසුවෙකු එකතු කරන්න</button>
         </div>
+        <div class="grade-grid" id="students-grade-cards"></div>
         <div class="toolbar">
-          <input id="student-search" placeholder="නම අනුව සොයන්න..." />
-          <select id="student-class-filter"><option value="">සියලුම ශ්‍රේණි</option></select>
+          <input id="student-search" placeholder="නම අනුව සොයන්න..." style="max-width: 300px;" />
+          <div class="btn-group-reports">
+            <button class="btn-secondary" onclick="exportTableToExcel('students-table', 'students_report')"><i class="fa-solid fa-file-excel" style="color:var(--accent-green)"></i> Excel</button>
+            <button class="btn-secondary" onclick="exportTableToCSV('students-table', 'students_report.csv')"><i class="fa-solid fa-file-csv" style="color:var(--accent-blue)"></i> CSV</button>
+            <button class="btn-secondary" onclick="exportStudentsPDF()"><i class="fa-solid fa-file-pdf" style="color:var(--accent-red)"></i> PDF</button>
+          </div>
         </div>
         <div class="panel">
-          <div id="students-table"></div>
+          <table id="students-table">
+            <thead><tr><th>ID</th><th>නම</th><th>ශ්‍රේණිය</th><th>අවසාන වරට ගෙවූ මාසය</th><th>දුරකථන අංකය</th><th>ක්‍රියාමාර්ග</th></tr></thead>
+            <tbody id="students-list"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- ---------- ATTENDANCE ---------- -->
+      <!-- ATTENDANCE -->
       <div class="page" id="page-attendance">
-        <div class="page-header"><h2>පැමිණීම</h2></div>
-        <div class="toolbar">
-          <select id="attendance-class-select"><option value="">ශ්‍රේණියක් තෝරන්න</option></select>
-          <input type="month" id="attendance-month" />
-        </div>
-        <div class="panel" id="attendance-sessions-panel"></div>
-        <div class="panel">
-          <div id="attendance-table"></div>
+        <div class="page-header"><h2>පැමිණීම සටහන් කිරීම (විශාල කළ 3D කාඩ්)</h2></div>
+        
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.8rem;">පළමුව ශ්‍රේණියක් තෝරන්න:</p>
+        <div class="grade-grid" id="attendance-grade-cards"></div>
+
+        <div id="attendance-section-container" class="hidden" style="margin-top: 1.5rem;">
+          <div class="toolbar" style="justify-content: space-between;">
+            <h3 id="attendance-table-title" style="font-size:1.1rem; color:var(--accent-blue);">සිසුන්ගේ පැමිණීම</h3>
+            <div class="btn-group-reports">
+              <button class="btn-secondary" onclick="exportTableToExcel('attendance-table', 'attendance_report')"><i class="fa-solid fa-file-excel" style="color:var(--accent-green)"></i> Excel</button>
+              <button class="btn-secondary" onclick="exportTableToCSV('attendance-table', 'attendance_report.csv')"><i class="fa-solid fa-file-csv" style="color:var(--accent-blue)"></i> CSV</button>
+              <button class="btn-secondary" onclick="exportAttendancePDF()"><i class="fa-solid fa-file-pdf" style="color:var(--accent-red)"></i> PDF</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <table id="attendance-table">
+              <thead>
+                <tr>
+                  <th>සිසුවාගේ නම</th>
+                  <th>ශ්‍රේණිය</th>
+                  <th>පන්ති දින 4 (විශාල කළ 3D කාඩ්)</th>
+                  <th>දැනුම්දීම</th>
+                </tr>
+              </thead>
+              <tbody id="attendance-list"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- ---------- FEES ---------- -->
+      <!-- FEES -->
       <div class="page" id="page-fees">
-        <div class="page-header"><h2>ගාස්තු</h2></div>
+        <div class="page-header"><h2>පන්ති ගාස්තු කළමනාකරණය (හිඟ මුදල් හිලව් කිරීම)</h2></div>
         <div class="toolbar">
-          <input id="fees-search" placeholder="සිසුවාගේ නම ටයිප් කරන්න..." />
+          <input id="fees-search" placeholder="සිසුවාගේ නම ටයිප් කරන්න..." style="max-width: 300px;" />
+          <div class="btn-group-reports">
+            <button class="btn-secondary" onclick="exportTableToExcel('fees-table', 'fees_report')"><i class="fa-solid fa-file-excel" style="color:var(--accent-green)"></i> Excel</button>
+            <button class="btn-secondary" onclick="exportTableToCSV('fees-table', 'fees_report.csv')"><i class="fa-solid fa-file-csv" style="color:var(--accent-blue)"></i> CSV</button>
+            <button class="btn-secondary" onclick="exportFeesPDF()"><i class="fa-solid fa-file-pdf" style="color:var(--accent-red)"></i> PDF</button>
+          </div>
         </div>
-        <div id="fees-search-results"></div>
-        <div id="fees-detail"></div>
+        <div class="panel">
+          <table id="fees-table">
+            <thead><tr><th>නම</th><th>ශ්‍රේණිය</th><th>අවසාන වරට ගෙවූ මාසය</th><th>පෙර හිඟ මාසය (ගෙවීමට ඇති)</th><th>ගාස්තුව</th><th>ක්‍රියාව සහ WhatsApp</th></tr></thead>
+            <tbody id="fees-list"></tbody>
+          </table>
+        </div>
       </div>
-
     </div>
   </div>
 
-  <!-- ===================== MODALS ===================== -->
   <div id="modal-root"></div>
   <div id="toast-root"></div>
 
-  <script type="module" src="app.js"></script>
   <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("sw.js").catch(() => {});
+    const GRADES = ["Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "A/L ICT"];
+
+    const store = {
+      selectedStudentGrade: "All",
+      selectedAttendanceGrade: null,
+      sessionDates: { 1: "2026-09-06", 2: "2026-09-13", 3: "2026-09-20", 4: "2026-09-27" },
+      students: JSON.parse(localStorage.getItem('ict_students')) || [
+        { id: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', phone: '94771234567' },
+        { id: '102', name: 'අමාලි සිල්වා', grade: 'Grade 11', phone: '94719876543' },
+        { id: '103', name: 'නලින් ප්‍රනාන්දු', grade: 'A/L ICT', phone: '94755555555' },
+        { id: '104', name: 'සහන් තාරක', grade: 'Grade 6', phone: '94781112223' }
+      ],
+      fees: JSON.parse(localStorage.getItem('ict_fees')) || [
+        { studentId: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', month: '2026-07', amount: 2500, status: 'Paid' },
+        { studentId: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', month: '2026-08', amount: 2500, status: 'Pending' },
+        { studentId: '102', name: 'අමාලි සිල්වා', grade: 'Grade 11', month: '2026-07', amount: 2500, status: 'Paid' },
+        { studentId: '102', name: 'අමාලි සිල්වා', grade: 'Grade 11', month: '2026-08', amount: 2500, status: 'Pending' },
+        { studentId: '103', name: 'නලින් ප්‍රනාන්දු', grade: 'A/L ICT', month: '2026-07', amount: 3000, status: 'Paid' },
+        { studentId: '104', name: 'සහන් තාරක', grade: 'Grade 6', month: '2026-07', amount: 2000, status: 'Pending' }
+      ],
+      attendance: JSON.parse(localStorage.getItem('ict_attendance')) || {},
+      save() {
+        localStorage.setItem('ict_students', JSON.stringify(this.students));
+        localStorage.setItem('ict_fees', JSON.stringify(this.fees));
+        localStorage.setItem('ict_attendance', JSON.stringify(this.attendance));
+      }
+    };
+
+    function init() {
+      setupListeners();
+      renderGradeCards();
+      renderDashboard();
+      renderStudents();
+      renderFees();
+    }
+
+    function setupListeners() {
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+          document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+          document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+          item.classList.add('active');
+          document.getElementById(`page-${item.dataset.page}`).classList.add('active');
+        });
+      });
+
+      document.getElementById('login-btn').addEventListener('click', () => {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        showToast("සාර්ථකව පිවිසුනි!");
+      });
+
+      document.getElementById('logout-btn').addEventListener('click', () => {
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('login-screen').classList.remove('hidden');
+      });
+
+      document.getElementById('add-student-btn').addEventListener('click', showAddStudentModal);
+      document.getElementById('student-search').addEventListener('input', renderStudents);
+      document.getElementById('fees-search').addEventListener('input', renderFees);
+    }
+
+    function getLastPaidMonth(studentId) {
+      const paidList = store.fees.filter(f => f.studentId === studentId && f.status === 'Paid');
+      if(paidList.length === 0) return 'නොමැත';
+      paidList.sort((a, b) => b.month.localeCompare(a.month));
+      return paidList[0].month;
+    }
+
+    function renderGradeCards() {
+      const studentCardsContainer = document.getElementById('students-grade-cards');
+      const attendanceCardsContainer = document.getElementById('attendance-grade-cards');
+      const studentGradesList = ["All", ...GRADES];
+
+      studentCardsContainer.innerHTML = studentGradesList.map(g => {
+        const count = g === "All" ? store.students.length : store.students.filter(s => s.grade === g).length;
+        return `
+          <div class="grade-card ${store.selectedStudentGrade === g ? 'active' : ''}" onclick="selectStudentGrade('${g}')">
+            <i class="fa-solid fa-users-rectangle"></i>
+            <h4>${g === "All" ? "සියලුම" : g}</h4>
+            <p>${count} සිසුන්</p>
+          </div>
+        `;
+      }).join('');
+
+      attendanceCardsContainer.innerHTML = GRADES.map(g => {
+        const count = store.students.filter(s => s.grade === g).length;
+        return `
+          <div class="grade-card ${store.selectedAttendanceGrade === g ? 'active' : ''}" onclick="selectAttendanceGrade('${g}')">
+            <i class="fa-solid fa-clipboard-user"></i>
+            <h4>${g}</h4>
+            <p>${count} සිසුන්</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.selectStudentGrade = (grade) => { store.selectedStudentGrade = grade; renderGradeCards(); renderStudents(); };
+    
+    window.selectAttendanceGrade = (grade) => { 
+      store.selectedAttendanceGrade = grade; 
+      renderGradeCards(); 
+      document.getElementById('attendance-section-container').classList.remove('hidden');
+      renderAttendance(); 
+    };
+
+    function renderDashboard() {
+      document.getElementById('stat-total-students').innerText = store.students.length;
+      const paid = store.fees.filter(f => f.status === 'Paid').reduce((sum, f) => sum + f.amount, 0);
+      const due = store.fees.filter(f => f.status === 'Pending').reduce((sum, f) => sum + f.amount, 0);
+
+      document.getElementById('stat-fees-collected').innerText = `රු. ${paid}`;
+      document.getElementById('stat-fees-due').innerText = `රු. ${due}`;
+
+      document.getElementById('recent-fees-list').innerHTML = store.fees.filter(f => f.status === 'Paid').slice(-5).reverse().map(f => `
+        <tr>
+          <td>${f.name}</td>
+          <td>${f.grade}</td>
+          <td>${f.month}</td>
+          <td>රු. ${f.amount}</td>
+          <td><span class="badge badge-success">ගෙවා ඇත</span></td>
+        </tr>
+      `).join('') || `<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">ගෙවීම් වාර්තා නොමැත</td></tr>`;
+    }
+
+    function renderStudents() {
+      const search = document.getElementById('student-search').value.toLowerCase();
+      const list = document.getElementById('students-list');
+      const filtered = store.students.filter(s => s.name.toLowerCase().includes(search) && (store.selectedStudentGrade === 'All' || s.grade === store.selectedStudentGrade));
+
+      list.innerHTML = filtered.length ? filtered.map(s => {
+        const lastPaid = getLastPaidMonth(s.id);
+        return `
+          <tr>
+            <td>${s.id}</td>
+            <td>${s.name}</td>
+            <td><span class="badge badge-success">${s.grade}</span></td>
+            <td><strong style="color:var(--accent-blue);">${lastPaid}</strong></td>
+            <td>${s.phone}</td>
+            <td>
+              <button class="btn-secondary" style="color:var(--accent-red)" onclick="deleteStudent('${s.id}')">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('') : `<tr><td colspan="6" style="text-align:center; color: var(--text-muted)">සිසුන් හමු නොවීය</td></tr>`;
+    }
+
+    function renderAttendance() {
+      if(!store.selectedAttendanceGrade) return;
+      const list = document.getElementById('attendance-list');
+      const filtered = store.students.filter(s => s.grade === store.selectedAttendanceGrade);
+
+      document.getElementById('attendance-table-title').innerText = `${store.selectedAttendanceGrade} - සිසුන්ගේ පන්ති දින 4 පැමිණීම`;
+
+      list.innerHTML = filtered.length ? filtered.map(s => {
+        let cardsHtml = '';
+        let attendanceSummaryText = `ICT Mahesh Panti Pahana - ${s.name} (${s.grade}) පැමිණීමේ වාර්තාව: `;
+        
+        for(let dayNum = 1; dayNum <= 4; dayNum++) {
+          const dateKey = store.sessionDates[dayNum];
+          const recordKey = `${dateKey}_${s.id}`;
+          const status = store.attendance[recordKey];
+
+          let statusClass = '';
+          let statusText = `${dayNum} දින`;
+          let textState = 'නොදන්නා';
+          if(status === 'present') {
+            statusClass = 'present';
+            statusText = `<i class="fa-solid fa-check" style="margin-bottom:3px"></i><br>${dayNum} දින`;
+            textState = 'පැමිණ ඇත (Present)';
+          } else if(status === 'absent') {
+            statusClass = 'absent';
+            statusText = `<i class="fa-solid fa-xmark" style="margin-bottom:3px"></i><br>${dayNum} දින`;
+            textState = 'පැමිණ නැත (Absent)';
+          } else {
+            statusText = `<i class="fa-regular fa-clock" style="margin-bottom:3px"></i><br>${dayNum} දින`;
+          }
+
+          attendanceSummaryText += `[දිනය ${dayNum}: ${textState}] `;
+
+          cardsHtml += `
+            <div class="mini-card ${statusClass}" title="${dateKey} - දිනය ${dayNum}" onclick="cycleAttendance('${s.id}', ${dayNum})">
+              <span style="text-align:center; font-size:0.75rem;">${statusText}</span>
+            </div>
+          `;
+        }
+
+        return `
+          <tr>
+            <td><strong>${s.name}</strong></td>
+            <td><span class="badge badge-success">${s.grade}</span></td>
+            <td>
+              <div class="attendance-cards-container">
+                ${cardsHtml}
+              </div>
+            </td>
+            <td>
+              <button class="btn-whatsapp" onclick="sendWhatsApp('${s.phone}', '${encodeURIComponent(attendanceSummaryText)}')">
+                <i class="fa-brands fa-whatsapp"></i> යවන්න
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('') : `<tr><td colspan="4" style="text-align:center; color: var(--text-muted)">මෙම ශ්‍රේණියේ සිසුන් නොමැත</td></tr>`;
+    }
+
+    window.cycleAttendance = (studentId, dayNum) => {
+      const dateKey = store.sessionDates[dayNum];
+      const recordKey = `${dateKey}_${studentId}`;
+      const current = store.attendance[recordKey];
+
+      if(!current) {
+        store.attendance[recordKey] = 'present';
+      } else if(current === 'present') {
+        store.attendance[recordKey] = 'absent';
+      } else {
+        delete store.attendance[recordKey];
+      }
+
+      store.save();
+      renderAttendance();
+      showToast("පැමිණීම යාවත්කාලීන විය!");
+    };
+
+    function renderFees() {
+      const search = document.getElementById('fees-search').value.toLowerCase();
+      const list = document.getElementById('fees-list');
+
+      const rows = store.students.filter(s => s.name.toLowerCase().includes(search)).map(s => {
+        const lastPaid = getLastPaidMonth(s.id);
+        const pendingFees = store.fees.filter(f => f.studentId === s.id && f.status === 'Pending');
+        
+        if(pendingFees.length === 0) {
+          const paidMsg = `ICT Mahesh Panti Pahana: ප්‍රිය මව්පිය/භාරකරු වෙතයි, ${s.name} (${s.grade}) දරුවාගේ සියලුම පන්ති ගාස්තු ගෙවා අවසන් කර ඇත. ස්තූතියි!`;
+          return `
+            <tr>
+              <td>${s.name}</td>
+              <td>${s.grade}</td>
+              <td><strong style="color:var(--accent-blue);">${lastPaid}</strong></td>
+              <td><span style="color:var(--accent-green)">සියලු ගාස්තු ගෙවා ඇත</span></td>
+              <td>-</td>
+              <td>
+                <button class="btn-whatsapp" onclick="sendWhatsApp('${s.phone}', '${encodeURIComponent(paidMsg)}')">
+                  <i class="fa-brands fa-whatsapp"></i> දැනුම් දෙන්න
+                </button>
+              </td>
+            </tr>
+          `;
+        }
+
+        pendingFees.sort((a, b) => a.month.localeCompare(b.month));
+        const oldestFee = pendingFees[0];
+        const dueMsg = `ICT Mahesh Panti Pahana: ප්‍රිය මව්පිය/භාරකරු වෙතයි, ${s.name} (${s.grade}) දරුවාගේ ${oldestFee.month} මසට අදාළ පන්ති ගාස්තුව (රු. ${oldestFee.amount}) ගෙවීමට ඇත. කරුණාකර එය පියවන ලෙස දන්වමු. ස්තූතියි!`;
+
+        return `
+          <tr>
+            <td>${s.name}</td>
+            <td>${s.grade}</td>
+            <td><strong style="color:var(--accent-blue);">${lastPaid}</strong></td>
+            <td><strong style="color:var(--accent-yellow)">${oldestFee.month}</strong></td>
+            <td>රු. ${oldestFee.amount}</td>
+            <td style="display:flex; gap:6px; align-items:center;">
+              <button class="btn-primary" style="padding:0.4rem 0.8rem; background:var(--accent-green)" onclick="payOldestFee('${oldestFee.studentId}', '${oldestFee.month}')">
+                <i class="fa-solid fa-coins"></i> හිලව්
+              </button>
+              <button class="btn-whatsapp" onclick="sendWhatsApp('${s.phone}', '${encodeURIComponent(dueMsg)}')">
+                <i class="fa-brands fa-whatsapp"></i> 
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      list.innerHTML = rows.join('') || `<tr><td colspan="6" style="text-align:center; color:var(--text-muted)">සිසුන් හමු නොවීය</td></tr>`;
+    }
+
+    window.payOldestFee = (studentId, month) => {
+      const feeRecord = store.fees.find(f => f.studentId === studentId && f.month === month && f.status === 'Pending');
+      if(feeRecord) {
+        feeRecord.status = 'Paid';
+        const nextMonth = '2026-09';
+        if(!store.fees.some(f => f.studentId === studentId && f.month === nextMonth)) {
+          store.fees.push({ studentId, name: feeRecord.name, grade: feeRecord.grade, month: nextMonth, amount: feeRecord.amount, status: 'Pending' });
+        }
+        store.save();
+        renderFees();
+        renderStudents();
+        renderDashboard();
+        showToast(`${month} මස සඳහා පන්ති ගාස්තුව සාර්ථකව හිලව් විය!`);
+      }
+    };
+
+    window.sendWhatsApp = function(phone, message) {
+      let url = `https://wa.me/${phone}?text=${message}`;
+      window.open(url, '_blank');
+      showToast("WhatsApp පණිවිඩය විවෘත විය!");
+    }
+
+    window.deleteStudent = (id) => {
+      store.students = store.students.filter(s => s.id !== id);
+      store.fees = store.fees.filter(f => f.studentId !== id);
+      store.save();
+      renderGradeCards();
+      renderStudents();
+      renderDashboard();
+      showToast("සිසුවා ඉවත් කරන ලදී");
+    };
+
+    // --- REPORT EXPORT FUNCTIONS ---
+    window.exportTableToExcel = function(tableID, filename = '') {
+      let tableSelect = document.getElementById(tableID);
+      let wb = XLSX.utils.table_to_book(tableSelect, {sheet: "Sheet1"});
+      XLSX.writeFile(wb, filename + '.xlsx');
+      showToast("Excel වාර්තාව බාගත කරන ලදී!");
+    }
+
+    window.exportTableToCSV = function(tableID, filename = '') {
+      let csv = [];
+      let rows = document.querySelectorAll("#" + tableID + " tr");
+      for (let i = 0; i < rows.length; i++) {
+        let row = [], cols = rows[i].querySelectorAll("td, th");
+        for (let j = 0; j < cols.length - 1; j++) {
+          row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+        }
+        csv.push(row.join(","));
+      }
+      let csvFile = new Blob([csv.join("\n")], {type: "text/csv;charset=utf-8;"});
+      let downloadLink = document.createElement("a");
+      downloadLink.download = filename;
+      downloadLink.href = window.URL.createObjectURL(csvFile);
+      downloadLink.style.display = "none";
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      showToast("CSV වාර්තාව බාගත කරන ලදී!");
+    }
+
+    window.exportStudentsPDF = function() {
+      const { jsPDF } = window.jspdf;
+      let doc = new jsPDF();
+      doc.text("ICT Mahesh - Students Report", 14, 20);
+      let y = 30;
+      doc.setFontSize(10);
+      store.students.forEach((s, idx) => {
+        let lastPaid = getLastPaidMonth(s.id);
+        doc.text(`${idx+1}. Name: ${s.name} | Grade: ${s.grade} | Last Paid: ${lastPaid} | Phone: ${s.phone}`, 14, y);
+        y += 10;
+        if(y > 280) { doc.addPage(); y = 20; }
+      });
+      doc.save("students_report.pdf");
+      showToast("Students PDF වාර්තාව බාගත කරන ලදී!");
+    }
+
+    window.exportAttendancePDF = function() {
+      const { jsPDF } = window.jspdf;
+      let doc = new jsPDF();
+      doc.text(`ICT Mahesh - Attendance Report (${store.selectedAttendanceGrade || 'All'})`, 14, 20);
+      let y = 30;
+      doc.setFontSize(10);
+      const filtered = store.students.filter(s => !store.selectedAttendanceGrade || s.grade === store.selectedAttendanceGrade);
+      filtered.forEach((s, idx) => {
+        let attSummary = "";
+        for(let d=1; d<=4; d++) {
+          let st = store.attendance[`${store.sessionDates[d]}_${s.id}`] || 'Pending';
+          attSummary += `Day ${d}: ${st} | `;
+        }
+        doc.text(`${idx+1}. ${s.name} (${s.grade}) -> ${attSummary}`, 14, y);
+        y += 10;
+        if(y > 280) { doc.addPage(); y = 20; }
+      });
+      doc.save("attendance_report.pdf");
+      showToast("Attendance PDF වාර්තාව බාගත කරන ලදී!");
+    }
+
+    window.exportFeesPDF = function() {
+      const { jsPDF } = window.jspdf;
+      let doc = new jsPDF();
+      doc.text("ICT Mahesh - Fees & Backlog Report", 14, 20);
+      let y = 30;
+      doc.setFontSize(10);
+      store.students.forEach((s, idx) => {
+        let lastPaid = getLastPaidMonth(s.id);
+        let pending = store.fees.filter(f => f.studentId === s.id && f.status === 'Pending');
+        let nextDue = pending.length > 0 ? pending[0].month : 'All Paid';
+        doc.text(`${idx+1}. ${s.name} (${s.grade}) - Last Paid: ${lastPaid} - Due: ${next`, 14, y);
+        y += 10;
+        if(y > 280) { doc.addPage(); y = 20; }
+      });
+      doc.save("fees_report.pdf");
+      showToast("Fees PDF වාර්තාව බාගත කරන ලදී!");
+    }
+
+    function showAddStudentModal() {
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.innerHTML = `
+        <div class="modal-body">
+          <h3 style="margin-bottom:1rem">නව සිසුවෙකු එකතු කරන්න</h3>
+          <div class="input-group"><label>නම</label><input type="text" id="modal-name" placeholder="නම ඇතුළත් කරන්න" /></div>
+          <div class="input-group"><label>ශ්‍රේණිය</label><select id="modal-grade">${GRADES.map(g => `<option value="${g}">${g}</option>`).join('')}</select></div>
+          <div class="input-group"><label>දුරකථන අංකය (උදා: 9477xxxxxxx)</label><input type="text" id="modal-phone" placeholder="947XXXXXXXX" /></div>
+          <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:1.5rem">
+            <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">අවලංගු කරන්න</button>
+            <button class="btn-primary" id="save-student-btn">සුරකින්න</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-root').appendChild(modal);
+
+      document.getElementById('save-student-btn').addEventListener('click', () => {
+        const name = document.getElementById('modal-name', '').value;
+        const grade = document.getElementById('modal-grade').value;
+        const phone = document.getElementById('modal-phone').value;
+        const newId = 's_' + Date.now().toString().slice(-4);
+
+        if (name && phone) {
+          store.students.push({ id: newId, name, grade, phone });
+          store.fees.push({ studentId: newId, name, grade, month: '2026-07', amount: 2500, status: 'Paid' });
+          store.fees.push({ studentId: newId, name, grade, month: '2026-08', amount: 2500, status: 'Pending' });
+          store.save();
+          renderGradeCards();
+          renderStudents();
+          renderDashboard();
+          renderFees();
+          modal.remove();
+          showToast("නව සිසුවා සාර්ථකව එකතු කරන ලදී!");
+        }
       });
     }
+
+    function showToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerText = msg;
+      document.getElementById('toast-root').appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    init();
   </script>
 </body>
 </html>
