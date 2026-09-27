@@ -1092,8 +1092,23 @@
       }
     };
 
+    // Normalizes any of these into WhatsApp's required international format (94XXXXXXXXX):
+    //   0771234567, 771234567, +94771234567, 94771234567
+    function normalizePhoneForWhatsApp(phone) {
+      let digits = String(phone || '').replace(/\D/g, ''); // strip spaces, +, -, etc.
+      if (digits.startsWith('0')) {
+        digits = '94' + digits.slice(1);       // 0771234567 -> 94771234567
+      } else if (digits.startsWith('94')) {
+        // already has country code, leave as-is
+      } else if (digits.length === 9) {
+        digits = '94' + digits;                // 771234567 -> 94771234567
+      }
+      return digits;
+    }
+
     window.sendWhatsApp = function(phone, message) {
-      let url = `https://wa.me/${phone}?text=${message}`;
+      const normalized = normalizePhoneForWhatsApp(phone);
+      let url = `https://wa.me/${normalized}?text=${message}`;
       window.open(url, '_blank');
       showToast("WhatsApp පණිවිඩය විවෘත විය!");
     }
@@ -1591,7 +1606,7 @@
           <h3 style="margin-bottom:1rem">නව සිසුවෙකු එකතු කරන්න</h3>
           <div class="input-group"><label>නම</label><input type="text" id="modal-name" placeholder="නම ඇතුළත් කරන්න" /></div>
           <div class="input-group"><label>ශ්‍රේණිය</label><select id="modal-grade">${GRADES.map(g => `<option value="${g}">${g}</option>`).join('')}</select></div>
-          <div class="input-group"><label>දුරකථන අංකය (උදා: 9477xxxxxxx)</label><input type="text" id="modal-phone" placeholder="947XXXXXXXX" /></div>
+          <div class="input-group"><label>දුරකථන අංකය (උදා: 0771234567)</label><input type="text" id="modal-phone" placeholder="0771234567" /></div>
           <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:1.5rem">
             <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">අවලංගු කරන්න</button>
             <button class="btn-primary" id="save-student-btn">සුරකින්න</button>
@@ -1603,9 +1618,19 @@
       document.getElementById('save-student-btn').addEventListener('click', () => {
         const name = document.getElementById('modal-name').value;
         const grade = document.getElementById('modal-grade').value;
-        const phone = document.getElementById('modal-phone').value;
+        const phoneRaw = document.getElementById('modal-phone').value;
+        const phone = normalizePhoneForWhatsApp(phoneRaw);
         const newId = 's_' + Date.now().toString().slice(-4);
         const gradeFee = store.gradeFees[grade] || 1000;
+
+        if (!name || !phoneRaw) {
+          showToast("කරුණාකර සියලු තොරතුරු ඇතුළත් කරන්න!");
+          return;
+        }
+        if (phone.length !== 11 || !phone.startsWith('94')) {
+          showToast("වැරදි දුරකථන අංකයකි! (උදා: 0771234567)");
+          return;
+        }
 
         if (name && phone) {
           store.students.push({ id: newId, name, grade, phone });
