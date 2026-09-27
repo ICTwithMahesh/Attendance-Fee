@@ -29,6 +29,12 @@
     onAuthStateChanged,
     signOut
   } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+  import {
+    getFirestore,
+    doc,
+    getDoc,
+    setDoc
+  } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCCICV4aqgdmnR0S8SKow8g_jqlD2_bbfE",
@@ -42,13 +48,22 @@
 
   const fbApp = initializeApp(firebaseConfig);
   const fbAuth = getAuth(fbApp);
+  const fbDb = getFirestore(fbApp);
 
-  // Expose a small bridge so the app's regular (non-module) script can use Firebase Auth.
+  // Expose a small bridge so the app's regular (non-module) script can use Firebase Auth + Firestore.
   // This module script loads asynchronously, so also fire a 'firebase-ready' event in case
   // the classic script below tries to use the bridge before this has run.
   window.fbSignIn = (email, password) => signInWithEmailAndPassword(fbAuth, email, password);
   window.fbSignOut = () => signOut(fbAuth);
   window.fbOnAuthStateChanged = (cb) => onAuthStateChanged(fbAuth, cb);
+
+  // Cloud data: one document per logged-in teacher, keyed by their Firebase Auth UID.
+  window.fbSaveData = (uid, data) => setDoc(doc(fbDb, "classData", uid), data, { merge: true });
+  window.fbLoadData = async (uid) => {
+    const snap = await getDoc(doc(fbDb, "classData", uid));
+    return snap.exists() ? snap.data() : null;
+  };
+
   window.dispatchEvent(new CustomEvent('firebase-ready'));
 </script>
 <style>
@@ -530,8 +545,55 @@
         localStorage.setItem('ict_fees', JSON.stringify(this.fees));
         localStorage.setItem('ict_attendance', JSON.stringify(this.attendance));
         localStorage.setItem('ict_grade_fees', JSON.stringify(this.gradeFees));
+        syncToCloud();
       }
     };
+
+    // --- Firestore cloud sync (per logged-in teacher account) ---
+    let currentUid = null;
+
+    function syncToCloud() {
+      if (!currentUid || !window.fbSaveData) return; // not logged in yet / Firebase still loading
+      window.fbSaveData(currentUid, {
+        students: store.students,
+        fees: store.fees,
+        attendance: store.attendance,
+        gradeFees: store.gradeFees
+      }).catch(err => {
+        console.error('Firestore save failed:', err);
+        showToast('දත්ත cloud එකට save කිරීමේ දෝෂයක් - අන්තර්ජාලය පරීක්ෂා කරන්න', 'error');
+      });
+    }
+
+    async function loadFromCloud(uid) {
+      if (!window.fbLoadData) return;
+      try {
+        const data = await window.fbLoadData(uid);
+        if (data) {
+          // Cloud copy exists - it's the source of truth, overwrite local state with it.
+          if (data.students) store.students = data.students;
+          if (data.fees) store.fees = data.fees;
+          if (data.attendance) store.attendance = data.attendance;
+          if (data.gradeFees) store.gradeFees = data.gradeFees;
+          localStorage.setItem('ict_students', JSON.stringify(store.students));
+          localStorage.setItem('ict_fees', JSON.stringify(store.fees));
+          localStorage.setItem('ict_attendance', JSON.stringify(store.attendance));
+          localStorage.setItem('ict_grade_fees', JSON.stringify(store.gradeFees));
+        } else {
+          // First time this account logs in - push whatever's local up as the initial cloud copy.
+          syncToCloud();
+        }
+        renderGradeCards();
+        renderDashboard();
+        renderStudents();
+        renderSettings();
+        if (store.selectedAttendanceGrade) renderAttendance();
+        if (store.selectedFeesGrade) renderFees();
+      } catch (err) {
+        console.error('Firestore load failed:', err);
+        showToast('Cloud එකෙන් දත්ත ලබාගැනීමේ දෝෂයක් - localStorage දත්ත භාවිතා වේ', 'error');
+      }
+    }
 
     function init() {
       document.getElementById('login-logo-img').src = LOGO_BASE64;
@@ -679,9 +741,12 @@
       function watchAuthState() {
         window.fbOnAuthStateChanged((user) => {
           if (user) {
+            currentUid = user.uid;
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
+            loadFromCloud(currentUid);
           } else {
+            currentUid = null;
             document.getElementById('app').classList.add('hidden');
             document.getElementById('login-screen').classList.remove('hidden');
           }
