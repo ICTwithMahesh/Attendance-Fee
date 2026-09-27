@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ICT Mahesh - පන්ති කළමනාකරු</title>
+<!-- Favicon 404 දෝෂය වළක්වා ගැනීමට -->
+<link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <!-- jsPDF and SheetJS for reports -->
@@ -104,7 +106,7 @@
   th { color: var(--text-muted); font-size: 0.85rem; }
   tr:hover { background: rgba(255, 255, 255, 0.02); }
 
-  /* --- 3D HOVER ATTENDANCE CARDS (UPDATED) --- */
+  /* --- 3D HOVER ATTENDANCE CARDS --- */
   .attendance-cards-container { display: flex; gap: 12px; perspective: 1000px; }
   .mini-card {
     width: 65px; height: 75px; border-radius: 10px; border: 1px solid var(--border-color);
@@ -174,7 +176,7 @@
   <div id="app" class="hidden">
     <div class="sidebar">
       <div class="brand">
-        <img src="8e084412-913b-4da2-9a73-0a37091f1621_2.png" alt="ICT Mahesh Logo" />
+        <img src="8e084412-913b-4da2-9a73-0a37091f1621_2.png" alt="ICT Mahesh Logo" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%233b82f6\' stroke-width=\'2\'><circle cx=\'12\' cy=\'8\' r=\'5\'/><path d=\'M20 21a8 8 0 0 0-16 0\'/></svg>'"/>
         <span>ICT Mahesh<small>පැමිණීම සහ ගාස්තු</small></span>
       </div>
       <div class="nav-item active" data-page="dashboard"><i class="fa-solid fa-chart-pie"></i> මුල් පිටුව</div>
@@ -672,7 +674,7 @@
         let lastPaid = getLastPaidMonth(s.id);
         let pending = store.fees.filter(f => f.studentId === s.id && f.status === 'Pending');
         let nextDue = pending.length > 0 ? pending[0].month : 'All Paid';
-        doc.text(`${idx+1}. ${s.name} (${s.grade}) - Last Paid: ${lastPaid} - Due: ${next`, 14, y);
+        doc.text(`${idx+1}. ${s.name} (${s.grade}) - Last Paid: ${lastPaid} - Due: ${nextDue}`, 14, y);
         y += 10;
         if(y > 280) { doc.addPage(); y = 20; }
       });
@@ -698,7 +700,7 @@
       document.getElementById('modal-root').appendChild(modal);
 
       document.getElementById('save-student-btn').addEventListener('click', () => {
-        const name = document.getElementById('modal-name', '').value;
+        const name = document.getElementById('modal-name').value;
         const grade = document.getElementById('modal-grade').value;
         const phone = document.getElementById('modal-phone').value;
         const newId = 's_' + Date.now().toString().slice(-4);
