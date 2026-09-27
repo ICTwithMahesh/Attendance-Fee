@@ -2,10 +2,17 @@
 <html lang="si">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>ICT Mahesh - පන්ති කළමනාකරු</title>
-<!-- Favicon 404 දෝෂය වළක්වා ගැනීමට -->
-<link rel="icon" href="data:,">
+<meta name="theme-color" content="#0f172a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ICT Mahesh">
+<!-- PWA logo/manifest icons are set at runtime from the app's own logo (see init()) -->
+<link id="manifest-link" rel="manifest">
+<link id="favicon-link" rel="icon">
+<link id="apple-touch-icon-link" rel="apple-touch-icon">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <!-- jsPDF and SheetJS for reports -->
@@ -30,7 +37,12 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
-  body { background: radial-gradient(circle at top right, #1e1b4b, #0f172a); color: var(--text-main); min-height: 100vh; display: flex; overflow-x: hidden; }
+  html { -webkit-text-size-adjust: 100%; }
+  @supports (padding: max(0px)) {
+    body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+    .mobile-topbar { padding-top: calc(0.8rem + env(safe-area-inset-top, 0px)); }
+  }
+  body { background: radial-gradient(circle at top right, #1e1b4b, #0f172a); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
   .hidden { display: none !important; }
 
   .btn-primary {
@@ -55,8 +67,8 @@
 
   .btn-group-reports { display: flex; gap: 5px; }
 
-  #login-screen { position: fixed; inset: 0; background: radial-gradient(circle at center, #1e1b4b, #0f172a); display: flex; justify-content: center; align-items: center; z-index: 1000; padding-bottom: 95px; }
-  .login-box { background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--border-color); padding: 2.5rem; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; }
+  #login-screen { position: relative; min-height: 100vh; width: 100%; box-sizing: border-box; background: radial-gradient(circle at center, #1e1b4b, #0f172a); display: flex; justify-content: center; align-items: center; padding: 2.5rem 1rem; }
+  .login-box { background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--border-color); padding: 2rem 1.5rem; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; }
   .login-logo { width: 90px; height: 90px; border-radius: 50%; margin-bottom: 1rem; object-fit: cover; border: 3px solid var(--accent-blue); box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
   .login-box h1 { font-size: 1.8rem; margin-bottom: 0.5rem; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .login-box p.sub { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
@@ -64,8 +76,15 @@
   .input-group label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; }
   .input-group input, select, .toolbar input { width: 100%; padding: 0.75rem 1rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; color: white; outline: none; }
 
-  #app { display: flex; width: 100vw; height: 100vh; overflow: hidden; padding-bottom: 95px; }
-  .sidebar { width: 260px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 1.5rem 1rem; }
+  #app { display: flex; width: 100%; min-height: 100vh; align-items: stretch; }
+  .sidebar { width: 260px; flex-shrink: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 1.5rem 1rem; }
+  .mobile-topbar { display: none; align-items: center; justify-content: space-between; gap: 10px; padding: 0.8rem 1rem; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 900; }
+  .mobile-topbar .brand { margin: 0; }
+  .mobile-topbar .brand img { width: 32px; height: 32px; }
+  .mobile-topbar .brand span { font-size: 0.95rem; }
+  .hamburger-btn { background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: var(--text-main); width: 42px; height: 42px; border-radius: 10px; font-size: 1.1rem; cursor: pointer; flex-shrink: 0; }
+  .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1799; }
+  .sidebar-backdrop.open { display: block; }
   .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 2rem; }
   .brand img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-blue); }
   .brand span { font-weight: 700; font-size: 1.1rem; display: flex; flex-direction: column; }
@@ -76,7 +95,7 @@
   .sidebar-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); }
   .sidebar-footer .email { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem; }
 
-  .main { flex: 1; padding: 2rem; overflow-y: auto; }
+  .main { flex: 1; min-width: 0; padding: 2rem; }
   .page { display: none; }
   .page.active { display: block; animation: fadeIn 0.3s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -101,9 +120,9 @@
   .grade-card h4 { font-size: 1rem; margin-bottom: 0.2rem; }
   .grade-card p { font-size: 0.7rem; color: var(--text-muted); }
 
-  .panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; backdrop-filter: blur(10px); margin-bottom: 1.5rem; }
+  .panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; backdrop-filter: blur(10px); margin-bottom: 1.5rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .toolbar { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-  table { width: 100%; border-collapse: collapse; text-align: left; }
+  table { width: 100%; min-width: 480px; border-collapse: collapse; text-align: left; }
   th, td { padding: 0.9rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
   th { color: var(--text-muted); font-size: 0.85rem; }
   tr:hover { background: rgba(255, 255, 255, 0.02); }
@@ -146,10 +165,11 @@
   .toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg-secondary); border-left: 4px solid var(--accent-blue); padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); z-index: 3000; }
 
   /* --- APP FOOTER (Created by Nexora Technologies) --- */
+  /* Normal-flow footer: scrolls with the page instead of floating over content */
   .app-footer {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 1500;
+    position: relative; width: 100%; box-sizing: border-box;
     background: transparent;
-    padding: 6px 20px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 20px 20px 28px; margin-top: 1rem; display: flex; flex-direction: column; align-items: center; gap: 6px;
   }
   .app-footer .footer-logo-img { max-width: 150px; width: 100%; height: auto; display: block; }
   .app-footer .footer-brand-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; justify-content: center; }
@@ -168,11 +188,21 @@
   .app-footer .footer-pill.email i { color: #ec4899; }
 
   @media (max-width: 768px) {
+    .mobile-topbar { display: flex; }
     #app { flex-direction: column; }
-    .sidebar { width: 100%; height: auto; padding: 1rem; }
+    .sidebar {
+      position: fixed; top: 0; left: 0; height: 100vh; width: 82%; max-width: 300px;
+      z-index: 1800; transform: translateX(-100%); transition: transform 0.28s ease;
+      overflow-y: auto; box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .main { padding: 1rem; }
+    .page-header { flex-wrap: wrap; gap: 0.6rem; }
     .grade-grid { grid-template-columns: repeat(2, 1fr); }
-    #app, #login-screen { padding-bottom: 140px; }
+    .stat-grid { grid-template-columns: 1fr; }
     .app-footer .footer-pill { font-size: 0.68rem; padding: 3px 9px; }
+    .app-footer .footer-logo-img { max-width: 110px; }
+    .modal-body { padding: 1.2rem; }
   }
 </style>
 </head>
@@ -187,11 +217,23 @@
       <div class="input-group"><label>විද්‍යුත් තැපෑල</label><input id="login-email" type="email" value="admin@ictmahesh.com" /></div>
       <div class="input-group"><label>මුරපදය</label><input id="login-password" type="password" value="password123" /></div>
       <button class="btn-primary" id="login-btn" style="width: 100%;"><i class="fa-solid fa-right-to-bracket"></i> පිවිසෙන්න</button>
+      <button class="btn-secondary hidden" id="install-app-btn" style="width:100%;margin-top:0.8rem;"><i class="fa-solid fa-mobile-screen-button"></i> Home Screen එකට Install කරන්න</button>
+      <p class="hidden" id="ios-install-note" style="margin-top:0.8rem;font-size:0.75rem;color:var(--text-muted);">
+        <i class="fa-solid fa-circle-info"></i> iPhone/iPad: Safari හි <b>Share</b> බොත්තම ➜ <b>Add to Home Screen</b> ඔබන්න
+      </p>
     </div>
   </div>
 
   <!-- MAIN APP CONTAINER -->
   <div id="app" class="hidden">
+    <div class="mobile-topbar">
+      <div class="brand">
+        <img src="" id="topbar-logo-img" alt="ICT Mahesh Logo" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--accent-blue);"/>
+        <span style="font-weight:700;">ICT Mahesh</span>
+      </div>
+      <button class="hamburger-btn" id="hamburger-btn" aria-label="මෙනුව"><i class="fa-solid fa-bars"></i></button>
+    </div>
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
     <div class="sidebar">
       <div class="brand">
         <img id="brand-logo-img" src="" alt="ICT Mahesh Logo"/>
@@ -394,7 +436,9 @@
       document.getElementById('login-logo-img').src = LOGO_BASE64;
       document.getElementById('brand-logo-img').src = LOGO_BASE64;
       document.getElementById('dashboard-logo-img').src = LOGO_BASE64;
+      document.getElementById('topbar-logo-img').src = LOGO_BASE64;
       document.getElementById('footer-logo-img').src = NEXORA_LOGO_BASE64;
+      setupPWA();
       setupListeners();
       renderGradeCards();
       renderDashboard();
@@ -402,7 +446,67 @@
       renderSettings();
     }
 
+    // --- PWA: use the app's own logo as the install icon, everywhere ---
+    function setupPWA() {
+      // Favicon + Apple touch icon = the ICT Mahesh logo
+      document.getElementById('favicon-link').setAttribute('href', LOGO_BASE64);
+      document.getElementById('apple-touch-icon-link').setAttribute('href', LOGO_BASE64);
+
+      // Build a manifest on the fly so "Add to Home Screen" uses the same logo
+      const manifest = {
+        name: "ICT Mahesh - පන්ති කළමනාකරු",
+        short_name: "ICT Mahesh",
+        start_url: ".",
+        display: "standalone",
+        background_color: "#0f172a",
+        theme_color: "#0f172a",
+        icons: [
+          { src: LOGO_BASE64, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+          { src: LOGO_BASE64, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        ]
+      };
+      const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+      document.getElementById('manifest-link').setAttribute('href', URL.createObjectURL(manifestBlob));
+
+      // Android/Chrome: capture the native install prompt
+      let deferredInstallPrompt = null;
+      const installBtn = document.getElementById('install-app-btn');
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        installBtn.classList.remove('hidden');
+      });
+      installBtn.addEventListener('click', async () => {
+        if (!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        installBtn.classList.add('hidden');
+      });
+      window.addEventListener('appinstalled', () => installBtn.classList.add('hidden'));
+
+      // iOS Safari has no beforeinstallprompt: show manual instructions instead
+      const ua = window.navigator.userAgent.toLowerCase();
+      const isIOS = /iphone|ipad|ipod/.test(ua);
+      const isStandalone = ('standalone' in window.navigator) && window.navigator.standalone;
+      if (isIOS && !isStandalone) {
+        document.getElementById('ios-install-note').classList.remove('hidden');
+      }
+    }
+
+    function closeMobileSidebar() {
+      document.querySelector('.sidebar').classList.remove('open');
+      document.getElementById('sidebar-backdrop').classList.remove('open');
+    }
+    function toggleMobileSidebar() {
+      document.querySelector('.sidebar').classList.toggle('open');
+      document.getElementById('sidebar-backdrop').classList.toggle('open');
+    }
+
     function setupListeners() {
+      document.getElementById('hamburger-btn').addEventListener('click', toggleMobileSidebar);
+      document.getElementById('sidebar-backdrop').addEventListener('click', closeMobileSidebar);
+
       document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
           document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -410,6 +514,8 @@
           item.classList.add('active');
           document.getElementById(`page-${item.dataset.page}`).classList.add('active');
           if(item.dataset.page === 'settings') renderSettings();
+          closeMobileSidebar();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         });
       });
 
