@@ -362,6 +362,7 @@
       <div class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i> පන්ති ගාස්තු සැකසුම්</div>
       <div class="sidebar-footer">
         <div class="email" id="current-user-email">admin@ictmahesh.com</div>
+        <div id="cloud-status" style="font-size:0.7rem; margin-top:4px; opacity:0.85;"></div>
         <button class="btn-secondary" id="logout-btn" style="width:100%"><i class="fa-solid fa-arrow-right-from-bracket"></i> ඉවත් වන්න</button>
       </div>
     </div>
@@ -552,21 +553,40 @@
     // --- Firestore cloud sync (per logged-in teacher account) ---
     let currentUid = null;
 
+    function setCloudStatus(text, color) {
+      const el = document.getElementById('cloud-status');
+      if (el) { el.textContent = text; el.style.color = color; }
+    }
+
     function syncToCloud() {
-      if (!currentUid || !window.fbSaveData) return; // not logged in yet / Firebase still loading
+      if (!currentUid) {
+        // Not signed in yet (or Firebase Auth hasn't confirmed a session) - nothing goes to
+        // the cloud in this state, only localStorage. Make that visible instead of silent.
+        setCloudStatus('⚠️ Cloud login නැත - local විතරයි save වෙන්නේ', '#f59e0b');
+        return;
+      }
+      if (!window.fbSaveData) {
+        setCloudStatus('⚠️ Firebase load වෙමින්... - නැවත උත්සාහ කරන්න', '#f59e0b');
+        return;
+      }
+      setCloudStatus('🔄 Cloud එකට save වෙමින්...', '#94a3b8');
       window.fbSaveData(currentUid, {
         students: store.students,
         fees: store.fees,
         attendance: store.attendance,
         gradeFees: store.gradeFees
+      }).then(() => {
+        setCloudStatus('☁️ Cloud එකට save විය', '#10b981');
       }).catch(err => {
         console.error('Firestore save failed:', err);
-        showToast('දත්ත cloud එකට save කිරීමේ දෝෂයක් - අන්තර්ජාලය පරීක්ෂා කරන්න', 'error');
+        setCloudStatus('❌ Cloud save අසාර්ථකයි: ' + (err && err.code ? err.code : 'දෝෂයක්'), '#ef4444');
+        showToast('දත්ත cloud එකට save කිරීමේ දෝෂයක් - අන්තර්ජාලය පරීක්ෂා කරන්න');
       });
     }
 
     async function loadFromCloud(uid) {
       if (!window.fbLoadData) return;
+      setCloudStatus('🔄 Cloud එකෙන් load වෙමින්...', '#94a3b8');
       try {
         const data = await window.fbLoadData(uid);
         if (data) {
@@ -589,9 +609,11 @@
         renderSettings();
         if (store.selectedAttendanceGrade) renderAttendance();
         if (store.selectedFeesGrade) renderFees();
+        if (data) setCloudStatus('☁️ Cloud එකෙන් load විය', '#10b981');
       } catch (err) {
         console.error('Firestore load failed:', err);
-        showToast('Cloud එකෙන් දත්ත ලබාගැනීමේ දෝෂයක් - localStorage දත්ත භාවිතා වේ', 'error');
+        setCloudStatus('❌ Cloud load අසාර්ථකයි: ' + (err && err.code ? err.code : 'දෝෂයක්'), '#ef4444');
+        showToast('Cloud එකෙන් දත්ත ලබාගැනීමේ දෝෂයක් - localStorage දත්ත භාවිතා වේ');
       }
     }
 
@@ -619,7 +641,7 @@
       const manifest = {
         name: "ICT Mahesh - Class Management System",
         short_name: "ICT Mahesh",
-        start_url: ".",
+        start_url: window.location.href,
         display: "standalone",
         background_color: "#0f172a",
         theme_color: "#0f172a",
