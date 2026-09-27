@@ -106,37 +106,33 @@
   th { color: var(--text-muted); font-size: 0.85rem; }
   tr:hover { background: rgba(255, 255, 255, 0.02); }
 
-  /* --- 3D HOVER ATTENDANCE CARDS --- */
-  .attendance-cards-container { display: flex; gap: 12px; perspective: 1000px; }
+  /* --- CARDS CONTAINER FOR MONTHS & ATTENDANCE --- */
+  .cards-container { display: flex; gap: 10px; flex-wrap: wrap; perspective: 1000px; }
   .mini-card {
-    width: 65px; height: 75px; border-radius: 10px; border: 1px solid var(--border-color);
+    width: 75px; height: 75px; border-radius: 10px; border: 1px solid var(--border-color);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    font-size: 0.85rem; cursor: pointer; background: rgba(15, 23, 42, 0.6);
+    font-size: 0.8rem; cursor: pointer; background: rgba(15, 23, 42, 0.6);
     color: var(--text-muted); font-weight: 600;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
     transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     transform-style: preserve-3d;
   }
   .mini-card:hover {
-    transform: translateY(-8px) scale(1.08) rotateX(8deg) rotateY(-8deg);
+    transform: translateY(-5px) scale(1.05);
     border-color: var(--accent-blue);
-    box-shadow: 0 15px 25px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
     color: var(--text-main);
   }
-  .mini-card.present { 
+  .mini-card.present, .mini-card.paid-month { 
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(15, 23, 42, 0.8)); 
     border: 1px solid var(--accent-green); 
     color: var(--accent-green); 
-    box-shadow: 0 6px 15px rgba(16, 185, 129, 0.2);
   }
-  .mini-card.present:hover { box-shadow: 0 15px 25px rgba(16, 185, 129, 0.4); }
   .mini-card.absent { 
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(15, 23, 42, 0.8)); 
     border: 1px solid var(--accent-red); 
     color: var(--accent-red); 
-    box-shadow: 0 6px 15px rgba(239, 68, 68, 0.2);
   }
-  .mini-card.absent:hover { box-shadow: 0 15px 25px rgba(239, 68, 68, 0.4); }
 
   .badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
   .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
@@ -179,6 +175,7 @@
       <div class="nav-item" data-page="students"><i class="fa-solid fa-user-graduate"></i> සිසුන්</div>
       <div class="nav-item" data-page="attendance"><i class="fa-solid fa-calendar-check"></i> පැමිණීම</div>
       <div class="nav-item" data-page="fees"><i class="fa-solid fa-credit-card"></i> ගාස්තු</div>
+      <div class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i> පන්ති ගාස්තු සැකසුම්</div>
       <div class="sidebar-footer">
         <div class="email" id="current-user-email">admin@ictmahesh.com</div>
         <button class="btn-secondary" id="logout-btn" style="width:100%"><i class="fa-solid fa-arrow-right-from-bracket"></i> ඉවත් වන්න</button>
@@ -229,7 +226,6 @@
       <!-- ATTENDANCE -->
       <div class="page" id="page-attendance">
         <div class="page-header"><h2>පැමිණීම සටහන් කිරීම</h2></div>
-        
         <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.8rem;">පළමුව ශ්‍රේණියක් තෝරන්න:</p>
         <div class="grade-grid" id="attendance-grade-cards"></div>
 
@@ -242,14 +238,13 @@
               <button class="btn-secondary" onclick="exportAttendancePDF()"><i class="fa-solid fa-file-pdf" style="color:var(--accent-red)"></i> PDF</button>
             </div>
           </div>
-
           <div class="panel">
             <table id="attendance-table">
               <thead>
                 <tr>
                   <th>සිසුවාගේ නම</th>
                   <th>ශ්‍රේණිය</th>
-                  <th>පන්ති දින 4 (3D කාඩ්)</th>
+                  <th>පන්ති දින 4 (කාඩ්)</th>
                   <th>දැනුම්දීම</th>
                 </tr>
               </thead>
@@ -262,7 +257,6 @@
       <!-- FEES -->
       <div class="page" id="page-fees">
         <div class="page-header"><h2>පන්ති ගාස්තු කළමනාකරණය (හිඟ මුදල් හිලව් කිරීම)</h2></div>
-        
         <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.8rem;">පළමුව ශ්‍රේණියක් තෝරන්න:</p>
         <div class="grade-grid" id="fees-grade-cards"></div>
 
@@ -278,10 +272,19 @@
           <div class="panel">
             <h3 id="fees-table-title" style="font-size:1.1rem; color:var(--accent-blue); margin-bottom: 1rem;">සිසුන්ගේ ගෙවීම් විස්තර</h3>
             <table id="fees-table">
-              <thead><tr><th>නම</th><th>ශ්‍රේණිය</th><th>ගෙවූ මාස (Paid Months)</th><th>අවසාන හිඟ මාසය (ගෙවීමට ඇති)</th><th>ක්‍රියාව සහ WhatsApp</th></tr></thead>
+              <thead><tr><th>නම</th><th>ශ්‍රේණිය</th><th>ගෙවූ මාස (Paid Month Cards)</th><th>අවසාන හිඟ මාසය (ගෙවීමට ඇති)</th><th>ක්‍රියාව සහ WhatsApp</th></tr></thead>
               <tbody id="fees-list"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS (GRADE FEES) -->
+      <div class="page" id="page-settings">
+        <div class="page-header"><h2>පන්ති ගාස්තු සැකසුම් (ශ්‍රේණිය අනුව ගාස්තු වෙනස් කිරීම)</h2></div>
+        <div class="panel" style="max-width: 600px;">
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">මෙහිදී ඔබට එක් එක් පන්තියට/ශ්‍රේණියට අදාළ මාසික පන්ති ගාස්තුව වෙනස් කළ හැක (ነියමිත Default අගය රු. 1000 කි).</p>
+          <div id="grade-fees-settings-list"></div>
         </div>
       </div>
     </div>
@@ -293,10 +296,15 @@
   <script>
     const GRADES = ["Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "A/L ICT"];
 
+    // Default 1000 for each grade if not set
+    const defaultGradeFees = {};
+    GRADES.forEach(g => defaultGradeFees[g] = 1000);
+
     const store = {
       selectedStudentGrade: "All",
       selectedAttendanceGrade: null,
       selectedFeesGrade: null,
+      gradeFees: JSON.parse(localStorage.getItem('ict_grade_fees')) || defaultGradeFees,
       sessionDates: { 1: "2026-09-06", 2: "2026-09-13", 3: "2026-09-20", 4: "2026-09-27" },
       students: JSON.parse(localStorage.getItem('ict_students')) || [
         { id: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', phone: '94771234567' },
@@ -305,19 +313,20 @@
         { id: '104', name: 'සහන් තාරක', grade: 'Grade 6', phone: '94781112223' }
       ],
       fees: JSON.parse(localStorage.getItem('ict_fees')) || [
-        { studentId: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', month: '2026-06', amount: 2500, status: 'Paid' },
-        { studentId: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', month: '2026-07', amount: 2500, status: 'Paid' },
-        { studentId: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', month: '2026-08', amount: 2500, status: 'Pending' },
-        { studentId: '102', name: 'අමාලි සිල්වා', grade: 'Grade 11', month: '2026-07', amount: 2500, status: 'Paid' },
-        { studentId: '102', name: 'අමාලි සිල්වා', grade: 'Grade 11', month: '2026-08', amount: 2500, status: 'Pending' },
-        { studentId: '103', name: 'නලින් ප්‍රනාන්දු', grade: 'A/L ICT', month: '2026-07', amount: 3000, status: 'Paid' },
-        { studentId: '104', name: 'සහන් තාරක', grade: 'Grade 6', month: '2026-06', amount: 2000, status: 'Pending' }
+        { studentId: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', month: '2026-06', amount: 1000, status: 'Paid' },
+        { studentId: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', month: '2026-07', amount: 1000, status: 'Paid' },
+        { studentId: '101', name: 'කසුන් පෙරේරා', grade: 'Grade 10', month: '2026-08', amount: 1000, status: 'Pending' },
+        { studentId: '102', name: 'අමාලි සිල්වා', grade: 'Grade 11', month: '2026-07', amount: 1000, status: 'Paid' },
+        { studentId: '102', name: 'අමාලි සිල්වා', grade: 'Grade 11', month: '2026-08', amount: 1000, status: 'Pending' },
+        { studentId: '103', name: 'නලින් ප්‍රනාන්දු', grade: 'A/L ICT', month: '2026-07', amount: 1000, status: 'Paid' },
+        { studentId: '104', name: 'සහන් තාරක', grade: 'Grade 6', month: '2026-06', amount: 1000, status: 'Pending' }
       ],
       attendance: JSON.parse(localStorage.getItem('ict_attendance')) || {},
       save() {
         localStorage.setItem('ict_students', JSON.stringify(this.students));
         localStorage.setItem('ict_fees', JSON.stringify(this.fees));
         localStorage.setItem('ict_attendance', JSON.stringify(this.attendance));
+        localStorage.setItem('ict_grade_fees', JSON.stringify(this.gradeFees));
       }
     };
 
@@ -326,6 +335,7 @@
       renderGradeCards();
       renderDashboard();
       renderStudents();
+      renderSettings();
     }
 
     function setupListeners() {
@@ -335,6 +345,7 @@
           document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
           item.classList.add('active');
           document.getElementById(`page-${item.dataset.page}`).classList.add('active');
+          if(item.dataset.page === 'settings') renderSettings();
         });
       });
 
@@ -395,7 +406,7 @@
           <div class="grade-card ${store.selectedFeesGrade === g ? 'active' : ''}" onclick="selectFeesGrade('${g}')">
             <i class="fa-solid fa-coins"></i>
             <h4>${g}</h4>
-            <p>${count} සිසුන්</p>
+            <p>${count} සිසුන් (ගාස්තුව: රු. ${store.gradeFees[g] || 1000})</p>
           </div>
         `;
       }).join('');
@@ -505,7 +516,7 @@
             <td><strong>${s.name}</strong></td>
             <td><span class="badge badge-success">${s.grade}</span></td>
             <td>
-              <div class="attendance-cards-container">
+              <div class="cards-container">
                 ${cardsHtml}
               </div>
             </td>
@@ -547,7 +558,20 @@
 
       const rows = filteredStudents.map(s => {
         const studentFees = store.fees.filter(f => f.studentId === s.id);
-        const paidMonths = studentFees.filter(f => f.status === 'Paid').map(f => `<span class="badge badge-success" style="margin-right:4px;">${f.month}</span>`).join('') || '<span style="color:var(--text-muted)">නොමැත</span>';
+        
+        // ගෙවූ මාස කාඩ් විදිහට පෙන්වීම
+        const paidItems = studentFees.filter(f => f.status === 'Paid');
+        let paidCardsHtml = '';
+        if(paidItems.length > 0) {
+          paidCardsHtml = `<div class="cards-container">` + paidItems.map(p => `
+            <div class="mini-card paid-month" title="ගෙවා ඇත: ${p.month} (රු. ${p.amount})">
+              <i class="fa-solid fa-circle-check" style="margin-bottom:2px"></i>
+              <span style="font-size:0.7rem;">${p.month}</span>
+            </div>
+          `).join('') + `</div>`;
+        } else {
+          paidCardsHtml = `<span style="color:var(--text-muted)">ගෙවූ මාස නොමැත</span>`;
+        }
         
         const pendingFees = studentFees.filter(f => f.status === 'Pending');
         pendingFees.sort((a, b) => a.month.localeCompare(b.month));
@@ -558,7 +582,7 @@
             <tr>
               <td><strong>${s.name}</strong></td>
               <td><span class="badge badge-success">${s.grade}</span></td>
-              <td>${paidMonths}</td>
+              <td>${paidCardsHtml}</td>
               <td><span style="color:var(--accent-green)">සියලු ගාස්තු ගෙවා ඇත</span></td>
               <td>
                 <button class="btn-whatsapp" onclick="sendWhatsApp('${s.phone}', '${encodeURIComponent(paidMsg)}')">
@@ -576,11 +600,11 @@
           <tr>
             <td><strong>${s.name}</strong></td>
             <td><span class="badge badge-success">${s.grade}</span></td>
-            <td>${paidMonths}</td>
+            <td>${paidCardsHtml}</td>
             <td><strong style="color:var(--accent-yellow)">${oldestFee.month} (රු. ${oldestFee.amount})</strong></td>
             <td style="display:flex; gap:6px; align-items:center;">
               <button class="btn-primary" style="padding:0.4rem 0.8rem; background:var(--accent-green)" onclick="payOldestFee('${oldestFee.studentId}', '${oldestFee.month}')">
-                <i class="fa-solid fa-coins"></i> හිලව් කරන්න (${oldestFee.month})
+                <i class="fa-solid fa-coins"></i> හිලව් (${oldestFee.month})
               </button>
               <button class="btn-whatsapp" onclick="sendWhatsApp('${s.phone}', '${encodeURIComponent(dueMsg)}')">
                 <i class="fa-brands fa-whatsapp"></i> 
@@ -598,14 +622,15 @@
       if(feeRecord) {
         feeRecord.status = 'Paid';
         
-        // ගණනය කිරීම සඳහා මීළඟ මාසය ස්වයංක්‍රීයව එකතු කිරීම (ဥပမာ: 2026-08 සිට 2026-09 වෙත)
+        // මීළඟ මාසය ස්වයංක්‍රීයව එකතු කිරීම (අදාළ ශ්‍රේණියේ ගාස්තුව සමග)
         let [year, mon] = month.split('-').map(Number);
         mon += 1;
         if(mon > 12) { mon = 1; year += 1; }
         const nextMonth = `${year}-${String(mon).padStart(2, '0')}`;
+        const currentGradeFee = store.gradeFees[feeRecord.grade] || 1000;
 
         if(!store.fees.some(f => f.studentId === studentId && f.month === nextMonth)) {
-          store.fees.push({ studentId, name: feeRecord.name, grade: feeRecord.grade, month: nextMonth, amount: feeRecord.amount, status: 'Pending' });
+          store.fees.push({ studentId, name: feeRecord.name, grade: feeRecord.grade, month: nextMonth, amount: currentGradeFee, status: 'Pending' });
         }
         
         store.save();
@@ -613,6 +638,32 @@
         renderStudents();
         renderDashboard();
         showToast(`${month} මස සඳහා ගාස්තුව සාර්ථකව හිලව් විය!`);
+      }
+    };
+
+    function renderSettings() {
+      const container = document.getElementById('grade-fees-settings-list');
+      container.innerHTML = GRADES.map(g => `
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; background: rgba(15, 23, 42, 0.4); padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+          <span style="font-weight: 600;">${g} පන්ති ගාස්තුව (රු.)</span>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="number" id="fee_input_${g.replace(/\s+/g, '_')}" value="${store.gradeFees[g] || 1000}" style="width: 120px;" />
+            <button class="btn-primary" onclick="updateGradeFee('${g}')">යාවත්කාලීන</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.updateGradeFee = (grade) => {
+      const inputId = `fee_input_${grade.replace(/\s+/g, '_')}`;
+      const val = parseFloat(document.getElementById(inputId).value);
+      if(!isNaN(val) && val >= 0) {
+        store.gradeFees[grade] = val;
+        store.save();
+        renderGradeCards();
+        showToast(`${grade} ගාස්තුව රු. ${val} ලෙස වෙනස් විය!`);
+      } else {
+        showToast("කරුණාකර సరైన අගයක් ඇතුළත් කරන්න!");
       }
     };
 
@@ -739,11 +790,12 @@
         const grade = document.getElementById('modal-grade').value;
         const phone = document.getElementById('modal-phone').value;
         const newId = 's_' + Date.now().toString().slice(-4);
+        const gradeFee = store.gradeFees[grade] || 1000;
 
         if (name && phone) {
           store.students.push({ id: newId, name, grade, phone });
-          store.fees.push({ studentId: newId, name, grade, month: '2026-07', amount: 2500, status: 'Paid' });
-          store.fees.push({ studentId: newId, name, grade, month: '2026-08', amount: 2500, status: 'Pending' });
+          store.fees.push({ studentId: newId, name, grade, month: '2026-07', amount: gradeFee, status: 'Paid' });
+          store.fees.push({ studentId: newId, name, grade, month: '2026-08', amount: gradeFee, status: 'Pending' });
           store.save();
           renderGradeCards();
           renderStudents();
@@ -757,7 +809,7 @@
 
     function showToast(msg) {
       const toast = document.createElement('div');
-      toast.className, toast.className = 'toast';
+      toast.className = 'toast';
       toast.innerText = msg;
       document.getElementById('toast-root').appendChild(toast);
       setTimeout(() => toast.remove(), 3000);
