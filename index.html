@@ -715,35 +715,42 @@
 
       list.innerHTML = filtered.length ? filtered.map(s => {
         let cardsHtml = '';
-        let attendanceSummaryText = `ICT Mahesh Panti Pahana - ${s.name} (${s.grade}) පැමිණීමේ වාර්තාව: `;
-        
+        const todayKey = new Date().toISOString().slice(0, 10);
+        let todayStatus = null;
+
         for(let dayNum = 1; dayNum <= 4; dayNum++) {
           const dateKey = store.sessionDates[dayNum];
           const recordKey = `${dateKey}_${s.id}`;
           const status = store.attendance[recordKey];
+          if(dateKey === todayKey) todayStatus = status;
 
           let statusClass = '';
           let statusText = `${dayNum} දින`;
-          let textState = 'නොදන්නා';
           if(status === 'present') {
             statusClass = 'present';
             statusText = `<i class="fa-solid fa-check" style="margin-bottom:3px"></i><br>${dayNum} දින`;
-            textState = 'පැමිණ ඇත (Present)';
           } else if(status === 'absent') {
             statusClass = 'absent';
             statusText = `<i class="fa-solid fa-xmark" style="margin-bottom:3px"></i><br>${dayNum} දින`;
-            textState = 'පැමිණ නැත (Absent)';
           } else {
             statusText = `<i class="fa-regular fa-clock" style="margin-bottom:3px"></i><br>${dayNum} දින`;
           }
-
-          attendanceSummaryText += `[දිනය ${dayNum}: ${textState}] `;
 
           cardsHtml += `
             <div class="mini-card ${statusClass}" title="${dateKey} - දිනය ${dayNum}" onclick="cycleAttendance('${s.id}', ${dayNum})">
               <span style="text-align:center; font-size:0.75rem;">${statusText}</span>
             </div>
           `;
+        }
+
+        // "යවන්න" බොත්තමෙන් යවන පණිවිඩය - අද දිනට අදාළ පැමිණීමේ තත්වය අනුව
+        let attendanceSummaryText;
+        if(todayStatus === 'present') {
+          attendanceSummaryText = `දයාබර දෙමාපියනි,ඔබේ දරුවා අද දින පන්තියට සහභාගි වී ඇත . ස්තූතියි!  මහේෂ් සර්`;
+        } else if(todayStatus === 'absent') {
+          attendanceSummaryText = `දයාබර දෙමාපියනි,ඔබේ දරුවා අද දින පන්තියට සහභාගි වී නොමැත. ස්තූතියි!  මහේෂ් සර්`;
+        } else {
+          attendanceSummaryText = `දයාබර දෙමාපියනි, ${s.name} දරුවාගේ අද දිනට අදාළ පැමිණීම තවම සටහන් කර නොමැත.`;
         }
 
         return `
@@ -843,17 +850,24 @@
 
         // අවසන් ගෙවූ දිනය සොයාගැනීම (වඩාත් අලුත්ම ගෙවීම)
         let lastPaidDateHtml = '<span style="color:var(--text-muted)">-</span>';
+        let lastPaidDateRaw = null;
         if(paidItems.length > 0) {
           const sortedPaid = [...paidItems].sort((a, b) => (a.paidDate || '').localeCompare(b.paidDate || ''));
           const lastPaid = sortedPaid[sortedPaid.length - 1];
+          lastPaidDateRaw = lastPaid.paidDate || null;
           lastPaidDateHtml = lastPaid.paidDate || '-';
         }
-        
+
+        // අද දිනම පන්ති ගාස්තුව ගෙවා ඇත්නම්, එයටම විශේෂිත WhatsApp පණිවිඩයක්
+        const todayKey = new Date().toISOString().slice(0, 10);
+        const paidToday = lastPaidDateRaw === todayKey;
+        const paidTodayMsg = `දයාබර දෙමාපියනි,ඔබේ දරුවා අද දින පන්ති ගාස්තු ගෙවා ඇත. ස්තූතියි!  මහේෂ් සර්`;
+
         const pendingFees = studentFees.filter(f => f.status === 'Pending');
         pendingFees.sort((a, b) => a.month.localeCompare(b.month));
 
         if(pendingFees.length === 0) {
-          const paidMsg = `ICT Mahesh Panti Pahana: ප්‍රිය මව්පිය/භාරකරු වෙතයි, ${s.name} (${s.grade}) දරුවාගේ සියලුම පන්ති ගාස්තු ගෙවා අවසන් කර ඇත. ස්තූතියි!`;
+          const paidMsg = paidToday ? paidTodayMsg : `ICT Mahesh Panti Pahana: ප්‍රිය මව්පිය/භාරකරු වෙතයි, ${s.name} (${s.grade}) දරුවාගේ සියලුම පන්ති ගාස්තු ගෙවා අවසන් කර ඇත. ස්තූතියි!`;
           return `
             <tr>
               <td data-label="නම"><strong>${s.name}</strong></td>
@@ -876,7 +890,7 @@
         }
 
         const oldestFee = pendingFees[0];
-        const dueMsg = `ICT Mahesh Panti Pahana: ප්‍රිය මව්පිය/භාරකරු වෙතයි, ${s.name} (${s.grade}) දරුවාගේ ${oldestFee.month} මසට අදාළ පන්ති ගාස්තුව (රු. ${oldestFee.amount}) ගෙවීමට ඇත. කරුණාකර එය පියවන ලෙස දන්වමු. ස්තූතියි!`;
+        const dueMsg = paidToday ? paidTodayMsg : `ICT Mahesh Panti Pahana: ප්‍රිය මව්පිය/භාරකරු වෙතයි, ${s.name} (${s.grade}) දරුවාගේ ${oldestFee.month} මසට අදාළ පන්ති ගාස්තුව (රු. ${oldestFee.amount}) ගෙවීමට ඇත. කරුණාකර එය පියවන ලෙස දන්වමු. ස්තූතියි!`;
 
         return `
           <tr>
