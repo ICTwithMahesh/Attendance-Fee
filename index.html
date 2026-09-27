@@ -1197,13 +1197,22 @@
       const val = parseFloat(document.getElementById(inputId).value);
       if(!isNaN(val) && val >= 0) {
         store.gradeFees[grade] = val;
+        // Any not-yet-paid fee record for this grade should reflect the new fee
+        // immediately, so the dashboard's "පොරොත්තු හිඟ ගාස්තු" stays accurate
+        // without needing to edit each student individually.
+        store.fees.forEach(f => {
+          if(f.grade === grade && f.status === 'Pending') f.amount = val;
+        });
         store.save();
         renderGradeCards();
-        showToast(`${grade} ගාස්තුව රු. ${val} ලෙස වෙනස් විය!`);
+        renderDashboard();
+        if(store.selectedFeesGrade === grade) renderFees();
+        showToast(`${grade} ගාස්තුව රු. ${val} ලෙස වෙනස් විය! (පොරොත්තු ගාස්තු ද යාවත්කාලීන විය)`);
       } else {
-        showToast("කරුණාකර సరైන අගයක් ඇතුළත් කරන්න!");
+        showToast("කරුණාකර නිවැරදි අගයක් ඇතුළත් කරන්න!");
       }
     };
+
 
     // Normalizes any of these into WhatsApp's required international format (94XXXXXXXXX):
     //   0771234567, 771234567, +94771234567, 94771234567
